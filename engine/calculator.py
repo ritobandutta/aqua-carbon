@@ -11,7 +11,7 @@ from .models import (
     DataConfidence, PlannerConstraints, ConstraintCheckResult,
     PlannerOutput, ScenarioInput
 )
-from .data_sources import get_regional_profile
+from .data_sources import get_regional_profile, VALUE_STATUS
 
 
 # Published baseline parameters for cooling types
@@ -162,6 +162,16 @@ def compute_facility_ledger(
     )
 
 
+def _confidence(key: str, published_level: DataConfidence) -> DataConfidence:
+    """A value only earns its published confidence once it is traced to a source.
+    Untraced values are LOW and labelled illustrative."""
+    return published_level if VALUE_STATUS.get(key) == "published" else DataConfidence.LOW
+
+
+def _src(label: str, key: str) -> str:
+    return label if VALUE_STATUS.get(key) == "published" else f"{label} [illustrative, not yet verified]"
+
+
 def compute_community_ledger(
     facility_ledger: FacilityLedger,
     region_key: str,
@@ -193,9 +203,9 @@ def compute_community_ledger(
         value=water_share_pct,
         unit="%",
         formatted_value=f"{water_share_pct}%",
-        source_label=f"BWSSB / MIDC industrial headroom allocation ({headroom:.0f} ML/yr buffer)",
+        source_label=_src(f"BWSSB / MIDC industrial headroom allocation ({headroom:.0f} ML/yr buffer, scenario input)", "water_headroom"),
         geographic_resolution="Ward / Industrial Sub-basin",
-        confidence=DataConfidence.HIGH,
+        confidence=_confidence("water_headroom", DataConfidence.MEDIUM),
         explanation=f"Represents {facility_ledger.direct_water_consumption_ml:.1f} ML consumed out of {headroom:.1f} ML municipal industrial buffer."
     )
 
@@ -204,9 +214,9 @@ def compute_community_ledger(
         value=float(household_equivalents),
         unit="households/year",
         formatted_value=f"{household_equivalents:,} households",
-        source_label=f"CPHEEO / BIS 1172 Urban Norm ({lpcd} LPCD, {household_size} persons/hh)",
+        source_label=_src(f"CPHEEO / BIS 1172 Urban Norm ({lpcd} LPCD, {household_size} persons/hh)", "household_norm"),
         geographic_resolution="Municipal Ward",
-        confidence=DataConfidence.HIGH,
+        confidence=_confidence("household_norm", DataConfidence.HIGH),
         explanation=f"Direct water draw equals the annual domestic water requirement of {household_equivalents:,} urban families."
     )
 
@@ -215,9 +225,9 @@ def compute_community_ledger(
         value=None,
         unit="category",
         formatted_value=reg["cgwb_aquifer_status"].value,
-        source_label=prov.get("aquifer", "Central Ground Water Board (CGWB)"),
+        source_label=_src(prov.get("aquifer", "Central Ground Water Board (CGWB)"), "aquifer"),
         geographic_resolution="Block / Taluk",
-        confidence=DataConfidence.HIGH,
+        confidence=_confidence("aquifer", DataConfidence.HIGH),
         explanation=f"Local watershed is designated as {reg['cgwb_aquifer_status'].value}; extraction exceeds annual natural recharge rate."
     )
 
@@ -226,9 +236,9 @@ def compute_community_ledger(
         value=substation_share_pct,
         unit="%",
         formatted_value=f"{substation_share_pct}%",
-        source_label="Local DISCOM 66/11kV Substation Line Rating",
+        source_label=_src("Local DISCOM 66/11kV Substation Line Rating (scenario input)", "substation_capacity"),
         geographic_resolution="Feeder / Substation Radius (3km)",
-        confidence=DataConfidence.MEDIUM,
+        confidence=_confidence("substation_capacity", DataConfidence.MEDIUM),
         explanation=f"Facility peak load ({facility_peak_mw:.1f} MW) consumes {substation_share_pct}% of the feeder substation rating ({substation_capacity_mw:.1f} MW)."
     )
 
@@ -237,9 +247,9 @@ def compute_community_ledger(
         value=grid_carbon_factor,
         unit="gCO2/kWh",
         formatted_value=f"{grid_carbon_factor:.0f} gCO2/kWh",
-        source_label=prov.get("grid_carbon", "CEA CO2 Baseline Database"),
+        source_label=_src(prov.get("grid_carbon", "CEA CO2 Baseline Database"), "grid_carbon"),
         geographic_resolution="Regional Grid Interconnection",
-        confidence=DataConfidence.HIGH,
+        confidence=_confidence("grid_carbon", DataConfidence.HIGH),
         explanation="Grid Scope 2 emission factor reflecting regional thermal and renewable generation mix."
     )
 
@@ -248,9 +258,9 @@ def compute_community_ledger(
         value=reg.get("grid_outage_risk_index_saidi_hours", 18.0),
         unit="hours/year",
         formatted_value=f"{reg.get('grid_outage_risk_index_saidi_hours', 18.0)} hrs/yr",
-        source_label=prov.get("outage", "SERC Regulatory Filings"),
+        source_label=_src(prov.get("outage", "SERC Regulatory Filings"), "outage"),
         geographic_resolution="Distribution Circle",
-        confidence=DataConfidence.MEDIUM,
+        confidence=_confidence("outage", DataConfidence.MEDIUM),
         explanation="System Average Interruption Duration Index indicating diesel generator fallback probability."
     )
 
@@ -259,9 +269,9 @@ def compute_community_ledger(
         value=reg.get("tanker_dependency_index_pct", 40.0),
         unit="%",
         formatted_value=f"{reg.get('tanker_dependency_index_pct', 40.0)}%",
-        source_label="WRI India / Bangalore Water Study 2026",
+        source_label=_src("WRI India / Bangalore Water Study 2026", "tanker_dependency"),
         geographic_resolution="Peri-urban Zone",
-        confidence=DataConfidence.MEDIUM,
+        confidence=_confidence("tanker_dependency", DataConfidence.MEDIUM),
         explanation="Proportion of neighboring residential wards dependent on unpiped private tanker deliveries."
     )
 
@@ -270,9 +280,9 @@ def compute_community_ledger(
         value=None,
         unit="status",
         formatted_value=reg.get("municipal_water_rationing_status", "Regular"),
-        source_label="Municipal Water Board Advisory",
+        source_label=_src("Municipal Water Board Advisory", "rationing"),
         geographic_resolution="Municipal Zone",
-        confidence=DataConfidence.HIGH,
+        confidence=_confidence("rationing", DataConfidence.MEDIUM),
         explanation="Current operating constraints on municipal water mains in this geographic zone."
     )
 

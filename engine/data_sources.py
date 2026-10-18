@@ -11,6 +11,27 @@ from typing import Dict, Any
 from .models import WaterStressLevel, AquiferStatus, DataConfidence
 
 
+class UnknownRegionError(ValueError):
+    pass
+
+
+# Provenance status of each regional value. The audit in docs/DATA_SOURCES.md is the source of truth.
+#   "published"   - traced to a specific published figure (URL + page recorded in data/sources.yaml)
+#   "illustrative" - plausible placeholder; NOT traced to a source. Shown as such in the UI.
+# Nothing is "published" until it has been checked. Update this map as the audit completes.
+VALUE_STATUS: Dict[str, str] = {
+    "water_stress": "illustrative",
+    "aquifer": "illustrative",
+    "grid_carbon": "illustrative",
+    "outage": "illustrative",
+    "tanker_dependency": "illustrative",
+    "rationing": "illustrative",
+    "household_norm": "illustrative",
+    "water_headroom": "illustrative",
+    "substation_capacity": "illustrative",
+}
+
+
 REGIONAL_PROFILES: Dict[str, Dict[str, Any]] = {
     "bengaluru": {
         "region_name": "Bengaluru Urban (Whitefield / Electronic City)",
@@ -161,9 +182,17 @@ REGIONAL_PROFILES: Dict[str, Dict[str, Any]] = {
 }
 
 
-def get_regional_profile(region_key: str = "bengaluru") -> Dict[str, Any]:
+def resolve_region_key(region_key: str = "bengaluru") -> str:
+    """Maps free text (e.g. 'Bengaluru, Karnataka, India') to a known region id.
+    Raises UnknownRegionError instead of silently substituting another region."""
     key = region_key.lower().strip()
-    for k, profile in REGIONAL_PROFILES.items():
+    for k in REGIONAL_PROFILES:
         if k in key:
-            return profile
-    return REGIONAL_PROFILES["bengaluru"]
+            return k
+    raise UnknownRegionError(
+        f"Unknown region '{region_key}'. Supported regions: {', '.join(sorted(REGIONAL_PROFILES))}."
+    )
+
+
+def get_regional_profile(region_key: str = "bengaluru") -> Dict[str, Any]:
+    return REGIONAL_PROFILES[resolve_region_key(region_key)]

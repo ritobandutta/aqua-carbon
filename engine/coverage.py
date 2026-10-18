@@ -7,6 +7,7 @@ Identifies spatial disparities indicating unserved or informal communities relyi
 
 from typing import Dict, Any, List
 from .models import CoverageDisparityResult, DataConfidence
+from .data_sources import resolve_region_key
 
 
 # Sourced ground-truth benchmark datasets for peri-urban clusters
@@ -49,12 +50,7 @@ def run_coverage_check(
     Evaluates spatial disparity between satellite-visible human settlement and official municipal water connections.
     If satellite footprint / piped coverage > threshold, flags systemic under-representation.
     """
-    key = region_key.lower().strip()
-    matched_key = "bengaluru"
-    for k in AREA_COVERAGE_BENCHMARKS.keys():
-        if k in key:
-            matched_key = k
-            break
+    matched_key = resolve_region_key(region_key)
 
     benchmark = AREA_COVERAGE_BENCHMARKS[matched_key]
     satellite_km2 = benchmark["satellite_settlement_builtup_km2"]
@@ -110,3 +106,28 @@ def run_coverage_check(
         confidence_impact=confidence_impact,
         recommended_ground_truth_actions=recommended_actions
     )
+
+
+COVERAGE_AFFECTED = ("water_headroom_share_pct", "household_water_equivalent_count")
+
+
+def apply_coverage_to_assessments(assessments, coverage: CoverageDisparityResult, threshold: float = 1.25) -> bool:
+    """If the coverage check found a gap, lower the confidence of the indicators that rely on official
+    connection records by one level (floor LOW) and say why in the indicator's explanation.
+    Mutates the ledgers in place. Returns True if anything was downgraded. Area-level only."""
+    if coverage.disparity_ratio <= threshold:
+        return False
+    order = [DataConfidence.LOW, DataConfidence.MEDIUM, DataConfidence.HIGH]
+    changed = False
+    for a in assessments.values():
+        for field in COVERAGE_AFFECTED:
+            ind = getattr(a.community_ledger, field)
+            if ind.confidence in (DataConfidence.HIGH, DataConfidence.MEDIUM):
+                ind.confidence = order[order.index(ind.confidence) - 1]
+                changed = True
+            if "Coverage check" not in ind.explanation:
+                ind.explanation += (
+                    f" Coverage check: satellite built-up area is {coverage.disparity_ratio:.2f}x the official piped "
+                    f"footprint, so official records likely under-represent people who rely on the shared system."
+                )
+    return changed

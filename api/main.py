@@ -20,8 +20,8 @@ from engine.models import (
     ScenarioInput, PlannerConstraints, CoolingType, Season
 )
 from engine.calculator import evaluate_scenario, run_constraint_planner
-from engine.coverage import run_coverage_check
-from engine.data_sources import get_regional_profile, REGIONAL_PROFILES
+from engine.coverage import run_coverage_check, apply_coverage_to_assessments
+from engine.data_sources import get_regional_profile, REGIONAL_PROFILES, UnknownRegionError
 from agents.orchestrator import AgentOrchestrator
 from evals.run_evals import run_all_evaluations
 
@@ -30,6 +30,11 @@ app = FastAPI(
     description="Dual-Ledger Data Center Cooling & Community Impact Evaluation Platform",
     version="2.0.0"
 )
+
+@app.exception_handler(UnknownRegionError)
+async def unknown_region_handler(request, exc: UnknownRegionError):
+    return JSONResponse(status_code=404, content={"detail": str(exc)})
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -92,6 +97,8 @@ async def evaluate_scenario_endpoint(scenario: ScenarioInput):
     try:
         result = orchestrator.process_scenario(scenario)
         return result
+    except UnknownRegionError:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -101,6 +108,8 @@ async def run_planner_endpoint(payload: PlannerRequest):
     try:
         output = run_constraint_planner(payload.scenario, payload.constraints)
         return output.model_dump()
+    except UnknownRegionError:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -110,6 +119,8 @@ async def get_coverage_check(region_key: str):
     try:
         result = run_coverage_check(region_key)
         return result.model_dump()
+    except UnknownRegionError:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -118,12 +129,15 @@ async def get_coverage_check(region_key: str):
 async def investigate_query_endpoint(payload: InvestigationRequest):
     try:
         assessments = evaluate_scenario(payload.scenario)
+        apply_coverage_to_assessments(assessments, run_coverage_check(payload.scenario.region))
         result = await orchestrator.answer_investigation_query(
             payload.query,
             payload.scenario,
             assessments
         )
         return result
+    except UnknownRegionError:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -139,6 +153,8 @@ async def run_arbiter_simulation_endpoint(payload: ArbiterRequest):
         from engine.arbiter import simulate_24h_arbiter
         result = simulate_24h_arbiter(payload.scenario, payload.ai_flexibility_pct)
         return result.model_dump()
+    except UnknownRegionError:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -148,6 +164,8 @@ async def run_evals_endpoint():
     try:
         eval_result = run_all_evaluations()
         return eval_result
+    except UnknownRegionError:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -169,6 +187,8 @@ async def run_tamper_demo():
             "action_taken": "BLOCKED_PUBLICATION",
             "verdict": "Independent Verifier Agent intercepted discrepancy and successfully blocked output publication."
         }
+    except UnknownRegionError:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

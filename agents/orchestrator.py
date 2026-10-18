@@ -8,19 +8,23 @@ answer, whichever source produced it, passes the verifier before it is returned.
 """
 
 import os
+import hashlib
+import json
 from typing import Dict, Any, Optional
 from engine.models import (
     ScenarioInput, ProfileAssessment, CoverageDisparityResult,
     PlannerConstraints, PlannerOutput, GeneratedBriefs, VerificationReport
 )
 from engine.calculator import evaluate_scenario, run_constraint_planner
-from engine.coverage import run_coverage_check
+from engine.data_sources import VALUE_STATUS
+from engine.coverage import run_coverage_check, apply_coverage_to_assessments
 from .context_agent import ContextAgent
 from .advisor_agent import AdvisorAgent
 from .verifier_agent import VerifierAgent
 from .planner_agent import PlannerAgent
 
 # Confirm availability against current Gemini model IDs before deploying (docs/OPEN_QUESTIONS.md).
+ENGINE_VERSION = "2.1.0"
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
 
@@ -56,6 +60,7 @@ class AgentOrchestrator:
 
         # 3. Coverage Check
         coverage_result = run_coverage_check(scenario.region)
+        apply_coverage_to_assessments(assessments, coverage_result)
 
         # 4. Constraint Planning
         planner_result: Optional[PlannerOutput] = None
@@ -80,6 +85,8 @@ class AgentOrchestrator:
         )
 
         return {
+            "run_id": self._run_id(scenario),
+            "engine_version": ENGINE_VERSION,
             "scenario": scenario.model_dump(),
             "region_context": region_context,
             "assessments": {k: v.model_dump() for k, v in assessments.items()},
@@ -88,6 +95,15 @@ class AgentOrchestrator:
             "briefs": briefs.model_dump(),
             "verification": verification_report.model_dump()
         }
+
+    @staticmethod
+    def _run_id(scenario: ScenarioInput) -> str:
+        """Same inputs, engine version and data provenance give the same id."""
+        payload = json.dumps(
+            {"scenario": scenario.model_dump(mode="json"), "engine": ENGINE_VERSION, "status": VALUE_STATUS},
+            sort_keys=True,
+        )
+        return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
 
     def _call_gemini(self, prompt: str) -> Optional[str]:
         """Returns Gemini's text, or None if no key is set or the call fails."""
