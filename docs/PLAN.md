@@ -1,5 +1,7 @@
 # AquaCarbon DC — Commons Edition: Build Plan
 
+> **Note (2026-10-18):** this plan was written before the first implementation landed, and the implementation took a simpler shape (single FastAPI app, vanilla JS UI, in-process agents). For what is built, what differs, and what is left, see [`STATUS.md`](STATUS.md). Phases below remain the roadmap for the remaining work.
+
 ## Context
 
 We're building AquaCarbon DC for the AI Builder Cup (Sustainability & Social Impact) in the empty private repo `ritobandutta/aqua-carbon`. The collaborator is OnHighEngineer.

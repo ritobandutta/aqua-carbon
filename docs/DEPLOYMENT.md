@@ -4,6 +4,51 @@ Status: **skeleton**. Nothing is deployed and nothing here has been run. Each ph
 
 Placeholders used below: `<PROJECT_ID>`, `<REGION>`, `<ARTIFACT_REPO>`, `<DATASET>`.
 
+## Current reality (read this first)
+
+The implemented app is **one container**, not the multi-service layout described below. That layout is the longer-term plan (see `PLAN.md` and `STATUS.md`).
+
+What exists today:
+
+- `Dockerfile`: Python 3.10 slim, runs `uvicorn api.main:app` on `$PORT` (default 8080), has a `/api/health` healthcheck. It builds and serves correctly (verified locally).
+- `deploy_cloudrun.sh` and `deploy_cloudrun.ps1`: `gcloud run deploy --source .` to `us-central1`, `--allow-unauthenticated`, `--min-instances 0`, `--max-instances 5`, 512Mi, 1 CPU, port 8080. They take the project from `gcloud config get-value project`.
+- Config is read from env: `GEMINI_API_KEY` (optional), `GEMINI_MODEL` (optional, default `gemini-2.5-flash`), `PORT`.
+- Without `GEMINI_API_KEY` the app runs in deterministic-only mode. All features work, and the investigator answers from templates.
+
+### Deploy the single container (minimum path)
+
+```bash
+gcloud auth login
+gcloud config set project <PROJECT_ID>
+gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com secretmanager.googleapis.com
+
+# Optional: live Gemini. Store the key as a secret, never in the image or the repo.
+printf '%s' '<YOUR_GEMINI_API_KEY>' | gcloud secrets create gemini-api-key --data-file=-
+
+# Deploy (edit the script first if you want a different region)
+bash deploy_cloudrun.sh
+# To attach the secret, add this flag to the gcloud run deploy command:
+#   --set-secrets GEMINI_API_KEY=gemini-api-key:latest
+# The Cloud Run service account then needs roles/secretmanager.secretAccessor.
+```
+
+Verify:
+
+```bash
+URL=$(gcloud run services describe aquacarbon-dc --region us-central1 --format 'value(status.url)')
+curl "$URL/api/health"        # expect {"status":"healthy",...}
+curl "$URL/api/evals/run"     # expect "all_passed": true
+```
+
+Notes:
+
+- The script deploys with `--allow-unauthenticated`, which makes the service public. That is intended for judges. Remove it for anything private.
+- `--min-instances 0` keeps idle cost near zero, with a cold start on first request.
+- Using `GEMINI_API_KEY` goes through the Gemini API (AI Studio), not Vertex AI. Vertex AI would need code changes (`genai.Client(vertexai=True, project=..., location=...)`) and the Vertex AI API enabled. That is not implemented yet.
+- Tear down with `gcloud run services delete aquacarbon-dc --region us-central1` and `gcloud secrets delete gemini-api-key`.
+
+The sections below describe the **planned** multi-service deployment and have not been implemented.
+
 ## 0. Prerequisites
 
 - [ ] A personal GCP project with billing and a budget alert set

@@ -62,17 +62,51 @@ def eval_verifier_catch_rate() -> Dict[str, Any]:
     verifier = VerifierAgent()
     report = verifier.verify_briefs(mutated_op_brief, mutated_comm_brief, assessments)
 
-    # Verifier MUST flag the mismatch!
-    catch_rate_pct = (report.failed_checks / max(report.total_checks, 1)) * 100.0
-    detected_tampering = (report.status == "FLAGGED_MISMATCH")
+    # Catch rate is measured per injected error: corrupt ONE engine value at a time (+15%),
+    # re-verify, and count how many of those single corruptions the verifier blocks.
+    injected = 0
+    caught = 0
+    misses: List[str] = []
+    for key, asm in assessments.items():
+        fl, cl = asm.facility_ledger, asm.community_ledger
+        targets = {
+            "PUE": f"{fl.pue:.2f}",
+            "water_ml": f"{fl.direct_water_consumption_ml:.1f}",
+            "carbon_t": f"{fl.scope2_carbon_tonnes:,.0f}",
+            "cost_cr": f"{fl.annual_operating_cost_inr_crores:.2f}",
+        }
+        if cl.water_headroom_share_pct.value is not None:
+            targets["headroom_pct"] = f"{cl.water_headroom_share_pct.value:.1f}"
+        for metric, original in targets.items():
+            raw = float(original.replace(",", ""))
+            corrupted = f"{raw * 1.15:.2f}" if metric in ("PUE", "cost_cr") else f"{raw * 1.15:.1f}"
+            op_c, cm_c = op_brief.replace(original, corrupted), comm_brief.replace(original, corrupted)
+            if op_c == op_brief and cm_c == comm_brief:
+                continue  # value not printed in these briefs, nothing to corrupt
+            injected += 1
+            if verifier.verify_briefs(op_c, cm_c, assessments).status != "PASSED":
+                caught += 1
+            else:
+                misses.append(f"{key}:{metric}")
+
+    # Also inject a fabricated claim while leaving every true number intact.
+    fabricated = op_brief + "\n\nNote: dry cooling achieves PUE of 0.95 using 1.0 ML of water."
+    injected += 1
+    if verifier.verify_briefs(fabricated, comm_brief, assessments).status != "PASSED":
+        caught += 1
+    else:
+        misses.append("fabricated_claim")
+
+    catch_rate_pct = (caught / max(injected, 1)) * 100.0
 
     return {
         "check": "Verifier Catch-Rate",
-        "total_injected_checks": report.total_checks,
-        "detected_failures": report.failed_checks,
+        "total_injected_checks": injected,
+        "detected_failures": caught,
         "catch_rate_pct": round(catch_rate_pct, 1),
-        "status": report.status,
-        "success": detected_tampering
+        "missed": misses,
+        "status": report.status,  # status for the combined multi-metric tamper
+        "success": report.status == "FLAGGED_MISMATCH" and caught == injected
     }
 
 
