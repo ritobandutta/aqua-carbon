@@ -11,7 +11,7 @@ client = TestClient(app)
 
 
 def test_html_ui_components_exist():
-    with open("static/index.html", "r", encoding="utf-8") as f:
+    with open("static/app.html", "r", encoding="utf-8") as f:
         html = f.read()
 
     required_ids = [

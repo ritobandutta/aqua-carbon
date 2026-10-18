@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Workbench | AquaCarbon DC</title>
+  <meta name="description" content="Compare data-center cooling choices on two ledgers: what the facility spends and what the community absorbs.">
+  <meta name="theme-color" content="#0A0A0A">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%230A0A0A%27/%3E%3Crect x=%277%27 y=%2715%27 width=%2718%27 height=%272%27 fill=%27%236366F1%27/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400&family=JetBrains+Mono:wght@300&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="topbar">
+    <div class="wrap">
+      <a class="wordmark" href="/" aria-label="AquaCarbon DC, home">Aqua<b>Carbon</b> DC</a>
+      <div class="topbar-meta">
+        <span class="mono">Workbench &middot; Illustrative inputs</span>
+        <a class="btn" href="/">Overview</a>
+        <button id="btn-run-evals" class="btn-evals" title="Run the evaluation suite" type="button">Run evals</button>
+      </div>
+    </div>
+  </header>
+
+  <nav class="app-nav" aria-label="Workbench sections">
+    <div class="wrap" role="tablist">
+      <button class="nav-tab active" data-tab="dashboard" role="tab" type="button"><span class="num">01</span> Dual ledger</button>
+      <button class="nav-tab" data-tab="coverage" role="tab" type="button"><span class="num">02</span> Coverage <span class="tab-indicator alert">Gap</span></button>
+      <button class="nav-tab" data-tab="planner" role="tab" type="button"><span class="num">03</span> Planner</button>
+      <button class="nav-tab" data-tab="investigator" role="tab" type="button"><span class="num">04</span> Investigator</button>
+      <button class="nav-tab" data-tab="briefs" role="tab" type="button"><span class="num">05</span> Briefs &amp; audit</button>
+      <button class="nav-tab" data-tab="review" role="tab" type="button"><span class="num">06</span> Claim review <span class="tab-indicator new">New</span></button>
+      <button class="nav-tab" data-tab="arbiter" role="tab" type="button"><span class="num">07</span> 24h dispatch</button>
+    </div>
+  </nav>
+
+  <section class="control-ribbon" aria-label="Scenario">
+    <div class="wrap">
+      <div class="control-grid">
+        <div class="control-group">
+          <label for="preset-selector">Site</label>
+          <select id="preset-selector" class="custom-select">
+            <option value="bengaluru">Bengaluru Whitefield, 15 MW</option>
+            <option value="chennai">Chennai Ambattur, 30 MW</option>
+            <option value="mumbai">Navi Mumbai Rabale, 50 MW</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label for="season-selector">Season</label>
+          <select id="season-selector" class="custom-select">
+            <option value="annual_average">Annual average</option>
+            <option value="dry_summer">Dry summer, 36.5&deg;C</option>
+            <option value="monsoon">Monsoon, 82% RH</option>
+            <option value="winter">Winter, 22&deg;C</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label for="workload-selector">Workload</label>
+          <select id="workload-selector" class="custom-select">
+            <option value="static_inference">24/7 inference, flat</option>
+            <option value="ai_training_flexible">Flexible training, shift 40% off peak</option>
+          </select>
+        </div>
+        <div class="control-group slider-group">
+          <div class="slider-header">
+            <label for="capacity-slider">IT load</label>
+            <span id="capacity-val" class="slider-value">15 MW</span>
+          </div>
+          <input type="range" id="capacity-slider" min="5" max="60" step="5" value="15">
+        </div>
+        <div class="control-group slider-group">
+          <div class="slider-header">
+            <label for="grid-slider">Grid carbon</label>
+            <span id="grid-val" class="slider-value">710 gCO2/kWh</span>
+          </div>
+          <input type="range" id="grid-slider" min="300" max="900" step="20" value="710">
+        </div>
+        <div class="control-group actions-group">
+          <button id="btn-recalculate" class="btn-primary" type="button">Recalculate</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="app-main" id="main">
+    <div class="wrap">
+
+      <!-- 01 -->
+      <section id="tab-dashboard" class="tab-content active" role="tabpanel">
+        <div class="section-card burden-card">
+          <div class="card-header">
+            <div>
+              <h2>The burden-shifting matrix</h2>
+              <p class="section-subtitle">Every cooling choice moves a burden onto the <strong>water system</strong>, the <strong>power grid</strong> or the <strong>atmosphere</strong>. There is no combined score, on purpose.</p>
+            </div>
+            <span class="verifier-badge" id="dash-verifier-badge">Deterministic engine</span>
+          </div>
+          <div class="burden-grid" id="burden-grid"></div>
+        </div>
+
+        <div class="ledgers-container">
+          <div class="ledger-column facility-ledger">
+            <div class="ledger-header">
+              <div class="eyebrow">Operator</div>
+              <h3>Facility ledger</h3>
+              <span class="ledger-subtitle">Energy, PUE, WUE, carbon and operating cost</span>
+            </div>
+            <div class="ledger-cards-grid" id="facility-ledger-cards"></div>
+          </div>
+          <div class="ledger-column community-ledger">
+            <div class="ledger-header">
+              <div class="eyebrow">Community</div>
+              <h3>Community ledger</h3>
+              <span class="ledger-subtitle">Water headroom, groundwater and grid peak</span>
+            </div>
+            <div class="ledger-cards-grid" id="community-ledger-cards"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 02 -->
+      <section id="tab-coverage" class="tab-content" role="tabpanel">
+        <div class="section-card">
+          <div class="card-header">
+            <div>
+              <h2>Coverage disparity check</h2>
+              <p class="section-subtitle">Satellite settlement footprints against official piped-water records. Where they disagree, people who share the aquifer may be missing from the data.</p>
+            </div>
+            <span class="confidence-tag warning">Data quality alert</span>
+          </div>
+          <div class="coverage-layout" id="coverage-layout"></div>
+        </div>
+      </section>
+
+      <!-- 03 -->
+      <section id="tab-planner" class="tab-content" role="tabpanel">
+        <div class="section-card">
+          <div class="card-header">
+            <div>
+              <h2>Constraint-aware planner</h2>
+              <p class="section-subtitle">Set facility and community limits together. If nothing satisfies every one, the planner says so and names the binding constraint instead of inventing a compromise.</p>
+            </div>
+          </div>
+          <div class="planner-layout">
+            <div class="planner-controls-panel">
+              <div class="control-box">
+                <h4>Facility limits</h4>
+                <div class="form-group">
+                  <label for="constraint-pue">Max PUE</label>
+                  <input type="number" id="constraint-pue" step="0.05" min="1.10" max="1.60" value="1.35">
+                </div>
+                <div class="form-group">
+                  <label for="constraint-cost">Max annual OpEx (INR Cr)</label>
+                  <input type="number" id="constraint-cost" step="10" min="50" max="250" value="160">
+                </div>
+              </div>
+              <div class="control-box">
+                <h4>Community limits</h4>
+                <div class="form-group">
+                  <label for="constraint-headroom">Max water headroom share (%)</label>
+                  <input type="number" id="constraint-headroom" step="5" min="5" max="150" value="50">
+                  <small class="hint-text">Share of the municipal industrial water allocation consumed</small>
+                </div>
+                <div class="form-group">
+                  <label for="constraint-grid">Max substation peak share (%)</label>
+                  <input type="number" id="constraint-grid" step="5" min="10" max="60" value="35">
+                  <small class="hint-text">Peak draw as a share of the local 66kV substation</small>
+                </div>
+              </div>
+              <button id="btn-run-planner" class="btn-primary w-full" type="button">Search feasible configurations</button>
+            </div>
+            <div class="planner-results-panel" id="planner-results">
+              <div class="empty-state"><p>Set the limits, then search.</p></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 04 -->
+      <section id="tab-investigator" class="tab-content" role="tabpanel">
+        <div class="section-card">
+          <div class="card-header">
+            <div>
+              <h2>Investigator</h2>
+              <p class="section-subtitle">Ask why a trade-off happens. Every number in an answer is checked against the engine before it is shown.</p>
+            </div>
+            <span class="verifier-badge success">Verifier enforced</span>
+          </div>
+          <div class="investigator-layout">
+            <div class="suggested-queries">
+              <button class="query-chip" type="button" data-q="Why does evaporative cooling save water but strain the grid?">Why does evaporative cooling save water but strain the grid?</button>
+              <button class="query-chip" type="button" data-q="What happens to the trade-off in dry summer vs monsoon season?">Dry summer vs monsoon?</button>
+              <button class="query-chip" type="button" data-q="How does hybrid adiabatic cooling reduce the community water burden?">How does hybrid cooling help the community?</button>
+              <button class="query-chip" type="button" data-q="Who bears the cost if the facility chooses air-cooled chillers?">Who bears the cost of air-cooled chillers?</button>
+            </div>
+            <div class="query-input-bar">
+              <input type="text" id="investigate-input" aria-label="Your question" placeholder="Ask about this scenario" value="Why does evaporative cooling save water but strain the grid?">
+              <button id="btn-ask-gemini" class="btn-primary" type="button">Investigate</button>
+            </div>
+            <div class="investigator-output-card" id="investigator-output" aria-live="polite">
+              <div class="output-placeholder"><p>Pick a question above or type your own.</p></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 05 -->
+      <section id="tab-briefs" class="tab-content" role="tabpanel">
+        <div class="section-card">
+          <div class="card-header">
+            <div>
+              <h2>Briefs and verifier audit</h2>
+              <p class="section-subtitle">Two briefs from one scenario: an engineering brief for operators and a plain-language brief for the community, each checked line by line.</p>
+            </div>
+            <div class="brief-toggle-group">
+              <button class="btn-toggle active" data-brief="operator" type="button">Operator</button>
+              <button class="btn-toggle" data-brief="community" type="button">Community</button>
+              <button class="btn-toggle" data-brief="verifier" type="button">Audit trail</button>
+            </div>
+          </div>
+          <div class="brief-display-container">
+            <div class="brief-actions">
+              <button id="btn-tamper-demo" class="btn-tamper" type="button" title="Corrupt a brief and watch the verifier block it">Inject a wrong number</button>
+              <button id="btn-copy-brief" class="btn-secondary" type="button">Copy markdown</button>
+            </div>
+            <div id="brief-provenance" class="prov-line"></div>
+            <div class="markdown-preview" id="brief-markdown-content"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 06 -->
+      <section id="tab-review" class="tab-content" role="tabpanel">
+        <div class="section-card">
+          <div class="card-header">
+            <div>
+              <h2>Permit claim review</h2>
+              <p class="section-subtitle">Compare a figure an applicant states with the modelled range for this scenario. The result is a list of questions to ask, not a finding of fault. Modelled inputs are illustrative and unverified.</p>
+            </div>
+            <span class="verifier-badge success"><span id="review-badge">Independent verifier</span></span>
+          </div>
+          <div class="investigator-layout">
+            <div class="suggested-queries">
+              <button class="query-chip" type="button" data-review="The hybrid adiabatic system will use 40 ML of water per year at a PUE of 1.2.">Aggressive: 40 ML, PUE 1.2</button>
+              <button class="query-chip" type="button" data-review="The evaporative cooling plant will use 275.9 ML of water per year.">Near the model: 275.9 ML</button>
+            </div>
+            <div class="query-input-bar stack">
+              <label for="review-text">Application text</label>
+              <textarea id="review-text" rows="3" placeholder="Paste text from the permit application"></textarea>
+              <div class="row">
+                <select id="review-cooling" class="custom-select" aria-label="Cooling type"><option value="hybrid_adiabatic">Hybrid adiabatic</option><option value="evaporative">Evaporative</option><option value="dry_cooling">Dry (air-cooled)</option></select>
+                <select id="review-metric" class="custom-select" aria-label="Metric">
+                  <option value="direct_water_ml">Annual water (ML)</option><option value="pue">PUE</option><option value="wue_l_per_kwh">WUE (L/kWh)</option>
+                  <option value="facility_energy_mwh">Energy (MWh/yr)</option><option value="scope2_carbon_tonnes">Scope 2 carbon (tCO2e)</option><option value="operating_cost_inr_crores">Operating cost (INR Cr)</option>
+                </select>
+                <input type="number" id="review-value" step="any" placeholder="Stated value" aria-label="Stated value" class="custom-select narrow">
+                <button id="btn-run-review-structured" class="btn-primary" type="button">Check this figure</button>
+                <button id="btn-run-review-text" class="btn-secondary" type="button">Read claims from text (needs Gemini)</button>
+              </div>
+            </div>
+            <div class="investigator-output-card" id="review-output" aria-live="polite">
+              <div class="output-placeholder"><p>Enter a figure, or paste application text.</p></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 07 -->
+      <section id="tab-arbiter" class="tab-content" role="tabpanel">
+        <div class="section-card">
+          <div class="card-header">
+            <div>
+              <h2>24-hour dispatch</h2>
+              <p class="section-subtitle">Hour by hour: night air-side economizing, mild-morning dry cooling, deferral of flexible AI batch work through the afternoon heat, and trimmed cooling at the evening residential peak.</p>
+            </div>
+            <span class="verifier-badge success">Hourly diurnal model</span>
+          </div>
+
+          <div class="arbiter-kpi-grid" id="arbiter-kpi-grid">
+            <div class="kpi-card"><span class="kpi-label">Daily water saved</span><span class="kpi-val" id="arbiter-water-saved">--</span><span class="kpi-sub" id="arbiter-water-pct">vs evaporative baseline</span></div>
+            <div class="kpi-card"><span class="kpi-label">Household-days restored</span><span class="kpi-val" id="arbiter-hh-restored">--</span><span class="kpi-sub">of drinking water</span></div>
+            <div class="kpi-card"><span class="kpi-label">Substation peak shaved</span><span class="kpi-val" id="arbiter-peak-shaved">--</span><span class="kpi-sub" id="arbiter-peak-sub">relieves 66kV feeder</span></div>
+            <div class="kpi-card"><span class="kpi-label">Free-cooling hours</span><span class="kpi-val" id="arbiter-free-hours">--</span><span class="kpi-sub">chillers off</span></div>
+          </div>
+
+          <div class="arbiter-controls-bar">
+            <div class="form-group inline-flex">
+              <label for="arbiter-flex-slider">AI batch flexibility</label>
+              <input type="range" id="arbiter-flex-slider" min="0" max="60" step="10" value="40">
+              <span id="arbiter-flex-val" class="slider-value">40%</span>
+            </div>
+            <button id="btn-run-arbiter" class="btn-primary" type="button">Simulate 24 hours</button>
+          </div>
+
+          <div class="dispatch-timeline-container">
+            <h3>Dispatch strategy</h3>
+            <div class="dispatch-phase-legend">
+              <span class="legend-item"><span class="legend-dot dot-free"></span> Night economizer, chillers off</span>
+              <span class="legend-item"><span class="legend-dot dot-dry"></span> Morning dry chiller</span>
+              <span class="legend-item"><span class="legend-dot dot-shift"></span> AI shift and mist</span>
+              <span class="legend-item"><span class="legend-dot dot-shave"></span> Evening peak-shave</span>
+            </div>
+            <div class="timeline-bar-strip" id="timeline-bar-strip"></div>
+          </div>
+
+          <div class="table-container">
+            <table class="data-table" id="arbiter-hourly-table">
+              <thead>
+                <tr><th>Hour</th><th>Ambient</th><th>Mode</th><th>Chiller</th><th>IT load</th><th>PUE</th><th>Water</th><th>Grid power</th></tr>
+              </thead>
+              <tbody id="arbiter-hourly-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <div id="evals-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Evaluation suite">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Evaluation suite</h3>
+        <button id="btn-close-modal" class="btn-close" type="button" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-eval-body">
+        <div class="loading-spinner">Running checks</div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="app-footer">
+    <div class="wrap">
+      <p><strong>AquaCarbon DC</strong> &middot; AI Builder Cup, Sustainability &amp; Social Impact</p>
+      <span class="footer-sub">The deterministic engine is the only source of numbers. Missing data is shown as unavailable. Results are modelled potential impact with illustrative facility inputs, not measured savings. Every unit-tagged number in a brief is checked against the engine by a separate verifier before it is shown.</span>
+    </div>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

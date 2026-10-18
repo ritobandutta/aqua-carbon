@@ -215,8 +215,16 @@ if os.path.exists(static_dir):
 
 
 @app.get("/")
-async def serve_index():
+async def serve_landing():
     index_file = os.path.join(static_dir, "index.html")
     if os.path.exists(index_file):
         return FileResponse(index_file)
     return {"message": "AquaCarbon DC API is active. Static frontend initializing."}
+
+
+@app.get("/app")
+async def serve_workbench():
+    app_file = os.path.join(static_dir, "app.html")
+    if os.path.exists(app_file):
+        return FileResponse(app_file)
+    raise HTTPException(status_code=404, detail="Workbench page not found")
