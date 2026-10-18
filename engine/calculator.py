@@ -66,7 +66,9 @@ def compute_facility_ledger(
     grid_carbon_factor: float = 710.0,
     electricity_tariff_inr_kwh: float = 8.50,
     water_tariff_inr_kl: float = 95.0,
-    workload_type: WorkloadType = WorkloadType.STATIC_INFERENCE
+    workload_type: WorkloadType = WorkloadType.STATIC_INFERENCE,
+    pue_scale: float = 1.0,
+    wue_scale: float = 1.0
 ) -> FacilityLedger:
     profile_meta = COOLING_SPEC_BASELINES[cooling_type]
     regional_data = get_regional_profile(region_key)
@@ -109,6 +111,10 @@ def compute_facility_ledger(
             adjusted_wue = round(adjusted_wue * 0.70, 3)  # 30% water savings running fully dry at night
         # Night economizer hours improve effective PUE
         adjusted_pue = round(max(adjusted_pue - 0.03, 1.10), 3)
+
+    # Sensitivity hooks (1.0 = central case). Used only by evaluate_with_bands.
+    adjusted_pue = round(adjusted_pue * pue_scale, 3)
+    adjusted_wue = round(adjusted_wue * wue_scale, 3)
 
     # Annual operational hours
     hours_per_year = 8760.0
@@ -489,3 +495,47 @@ def run_constraint_planner(
         refusal_reason=refusal,
         summary_verdict=verdict
     )
+
+
+
+# Assumed sensitivity ranges around the central inputs. These are NOT sourced confidence intervals:
+# they show how far each output moves if the unverified inputs are off by this much
+# (see docs/DATA_SOURCES.md for which inputs are unverified).
+SENSITIVITY_RANGES = {
+    "pue_pct": 0.05,
+    "wue_pct": 0.25,
+    "grid_carbon_pct": 0.10,
+    "electricity_tariff_pct": 0.20,
+    "water_tariff_pct": 0.30,
+}
+
+
+def evaluate_with_bands(scenario: ScenarioInput) -> Dict[str, Dict[str, Dict[str, float]]]:
+    """For each profile returns {metric: {low, central, high}} for water, energy, carbon and cost.
+    Outputs are monotonic in every varied input, so low = all inputs favourable, high = all adverse."""
+    r = SENSITIVITY_RANGES
+
+    def ledger(ct, sign):
+        return compute_facility_ledger(
+            cooling_type=ct,
+            it_capacity_mw=scenario.it_capacity_mw,
+            season=scenario.season,
+            region_key=scenario.region,
+            grid_carbon_factor=scenario.grid_carbon_factor_kg_per_mwh * (1 + sign * r["grid_carbon_pct"]),
+            electricity_tariff_inr_kwh=8.50 * (1 + sign * r["electricity_tariff_pct"]),
+            water_tariff_inr_kl=95.0 * (1 + sign * r["water_tariff_pct"]),
+            workload_type=scenario.workload_type,
+            pue_scale=1 + sign * r["pue_pct"],
+            wue_scale=1 + sign * r["wue_pct"],
+        )
+
+    out: Dict[str, Dict[str, Dict[str, float]]] = {}
+    for ct in scenario.selected_profiles:
+        lo, mid, hi = ledger(ct, -1), ledger(ct, 0), ledger(ct, +1)
+        out[ct.value] = {
+            "direct_water_ml": {"low": lo.direct_water_consumption_ml, "central": mid.direct_water_consumption_ml, "high": hi.direct_water_consumption_ml},
+            "facility_energy_mwh": {"low": lo.total_facility_energy_mwh, "central": mid.total_facility_energy_mwh, "high": hi.total_facility_energy_mwh},
+            "scope2_carbon_tonnes": {"low": lo.scope2_carbon_tonnes, "central": mid.scope2_carbon_tonnes, "high": hi.scope2_carbon_tonnes},
+            "operating_cost_inr_crores": {"low": lo.annual_operating_cost_inr_crores, "central": mid.annual_operating_cost_inr_crores, "high": hi.annual_operating_cost_inr_crores},
+        }
+    return out
