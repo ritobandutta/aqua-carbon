@@ -12,6 +12,7 @@ from .calculator import (
 )
 from .coverage import run_coverage_check
 from .core import AquaCarbonEngine, CoreScenarioInput
+from .arbiter import simulate_24h_arbiter, ArbiterSimulationResult, HourlyDispatchStep
 
 __all__ = [
     "CoolingType", "Season", "WaterStressLevel", "AquiferStatus", "DataConfidence",
@@ -21,5 +22,6 @@ __all__ = [
     "VerificationCheckItem", "GeneratedBriefs", "get_regional_profile",
     "REGIONAL_PROFILES", "compute_facility_ledger", "compute_community_ledger",
     "compute_burden_shift_scores", "evaluate_scenario", "run_constraint_planner",
-    "run_coverage_check", "AquaCarbonEngine", "CoreScenarioInput"
+    "run_coverage_check", "AquaCarbonEngine", "CoreScenarioInput",
+    "simulate_24h_arbiter", "ArbiterSimulationResult", "HourlyDispatchStep"
 ]

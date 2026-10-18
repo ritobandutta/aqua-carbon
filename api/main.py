@@ -52,6 +52,11 @@ class PlannerRequest(BaseModel):
     constraints: PlannerConstraints
 
 
+class ArbiterRequest(BaseModel):
+    scenario: ScenarioInput
+    ai_flexibility_pct: float = 40.0
+
+
 @app.get("/api/health")
 async def health_check():
     return {
@@ -119,6 +124,21 @@ async def investigate_query_endpoint(payload: InvestigationRequest):
             assessments
         )
         return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/arbiter/simulate")
+async def run_arbiter_simulation_endpoint(payload: ArbiterRequest):
+    """
+    24-Hour Arbiter & AI Dispatcher:
+    Simulates hourly free-cooling economizer schedule (inspired by Agentic-Arbiter)
+    coupled with AI batch compute load-shifting (inspired by CooL-LLM).
+    """
+    try:
+        from engine.arbiter import simulate_24h_arbiter
+        result = simulate_24h_arbiter(payload.scenario, payload.ai_flexibility_pct)
+        return result.model_dump()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

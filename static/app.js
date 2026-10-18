@@ -63,6 +63,9 @@ function initEventListeners() {
       const content = document.getElementById(targetId);
       if (content) content.classList.add("active");
       state.activeTab = tab.dataset.tab;
+      if (state.activeTab === "arbiter") {
+        runArbiterSimulation();
+      }
     });
   });
 
@@ -245,6 +248,20 @@ function initEventListeners() {
     btnCloseModal.addEventListener("click", () => {
       modal.classList.add("hidden");
     });
+  }
+
+  // 24h Arbiter Listeners
+  const arbiterFlexSlider = document.getElementById("arbiter-flex-slider");
+  const arbiterFlexVal = document.getElementById("arbiter-flex-val");
+  if (arbiterFlexSlider && arbiterFlexVal) {
+    arbiterFlexSlider.addEventListener("input", (e) => {
+      arbiterFlexVal.textContent = `${e.target.value}%`;
+    });
+  }
+
+  const btnArbiter = document.getElementById("btn-run-arbiter");
+  if (btnArbiter) {
+    btnArbiter.addEventListener("click", runArbiterSimulation);
   }
 }
 
@@ -843,4 +860,105 @@ async function runTamperDemo() {
     container.innerHTML = `<div style="color:#f43f5e;">Failed to run tamper demo: ${err.message}</div>`;
   }
 }
+
+// 24-Hour Arbiter & AI Dispatcher Simulation
+async function runArbiterSimulation() {
+  const btn = document.getElementById("btn-run-arbiter");
+  const slider = document.getElementById("arbiter-flex-slider");
+  const flexPct = slider ? parseFloat(slider.value) : 40.0;
+  
+  const origText = btn ? btn.innerHTML : "";
+  if (btn) {
+    btn.innerHTML = `<span class="spinner"></span> Simulating 24h Diurnal Curves...`;
+    btn.disabled = true;
+  }
+
+  try {
+    const payload = {
+      scenario: {
+        scenario_id: `${state.currentRegion}_24h_arbiter`,
+        scenario_title: `${state.currentRegion.toUpperCase()} 24h Thermal & Workload Arbiter`,
+        region: state.currentRegion,
+        season: state.currentSeason,
+        it_capacity_mw: parseFloat(state.itCapacityMw),
+        workload_type: state.workloadType,
+        custom_grid_carbon_intensity: parseFloat(state.gridCarbon)
+      },
+      ai_flexibility_pct: flexPct
+    };
+
+    const res = await fetch("/api/arbiter/simulate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+
+    // Populate KPIs
+    const elWater = document.getElementById("arbiter-water-saved");
+    const elWaterPct = document.getElementById("arbiter-water-pct");
+    const elHh = document.getElementById("arbiter-hh-restored");
+    const elPeak = document.getElementById("arbiter-peak-shaved");
+    const elFree = document.getElementById("arbiter-free-hours");
+
+    if (elWater) elWater.textContent = `${Math.round(data.water_saved_liters).toLocaleString()} L/day`;
+    if (elWaterPct) elWaterPct.textContent = `${data.water_savings_pct}% vs Evaporative Baseline`;
+    if (elHh) elHh.textContent = `${data.households_water_restored_days.toLocaleString()}`;
+    if (elPeak) elPeak.textContent = `${data.peak_grid_shaved_mw} MW`;
+    if (elFree) elFree.textContent = `${data.free_cooling_hours} Hours`;
+
+    // Render 24h timeline strip
+    const strip = document.getElementById("timeline-bar-strip");
+    if (strip && data.hourly_steps) {
+      strip.innerHTML = data.hourly_steps.map(step => {
+        let slotClass = "slot-dry";
+        if (step.cooling_mode.includes("Free-Cooling")) slotClass = "slot-free";
+        else if (step.cooling_mode.includes("CooL-LLM")) slotClass = "slot-shift";
+        else if (step.cooling_mode.includes("Peak-Shave")) slotClass = "slot-shave";
+
+        return `
+          <div class="timeline-slot ${slotClass}" title="${step.time_label}: ${step.ambient_temp_c}°C | ${step.cooling_mode} | IT: ${step.it_load_mw}MW | PUE: ${step.pue}">
+            <span class="slot-hour">${step.time_label}</span>
+            <span class="slot-temp">${step.ambient_temp_c}°</span>
+          </div>
+        `;
+      }).join("");
+    }
+
+    // Render hourly table
+    const tbody = document.getElementById("arbiter-hourly-tbody");
+    if (tbody && data.hourly_steps) {
+      tbody.innerHTML = data.hourly_steps.map(s => {
+        let badgeColor = "badge-dry";
+        if (s.cooling_mode.includes("Free-Cooling")) badgeColor = "badge-evap";
+        else if (s.cooling_mode.includes("CooL-LLM")) badgeColor = "badge-hybrid";
+        else if (s.cooling_mode.includes("Peak-Shave")) badgeColor = "badge-fail";
+
+        return `
+          <tr>
+            <td><strong>${s.time_label}</strong></td>
+            <td>${s.ambient_temp_c}°C <small style="color:var(--text-muted);">(${s.ambient_rh_pct}% RH)</small></td>
+            <td><span class="cooling-badge ${badgeColor}">${s.cooling_mode}</span></td>
+            <td><small>${s.chiller_status}</small></td>
+            <td>${s.it_load_mw.toFixed(1)} MW</td>
+            <td><strong>${s.pue.toFixed(2)}</strong></td>
+            <td>${s.water_intake_m3_h > 0 ? (s.water_intake_m3_h * 1000).toFixed(0) + " L/h" : "<span style='color:#34d399;'>0 L (Free Air)</span>"}</td>
+            <td>${s.facility_power_mw.toFixed(1)} MW</td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+  } catch (err) {
+    console.error("Arbiter simulation error:", err);
+  } finally {
+    if (btn) {
+      btn.innerHTML = origText;
+      btn.disabled = false;
+    }
+  }
+}
+
 
