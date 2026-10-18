@@ -7,6 +7,8 @@ Coordinates Gemini Pro Advisor and Gemini Flash adversarial compliance auditor.
 import os
 import json
 from typing import Dict, Any
+from dotenv import load_dotenv
+load_dotenv()
 
 from engine.core import AquaCarbonEngine, CoreScenarioInput
 

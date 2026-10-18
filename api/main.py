@@ -7,6 +7,9 @@ Designed for immediate Cloud Run zero-instance startup (<1s).
 
 import os
 from typing import Dict, Any, Optional
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
