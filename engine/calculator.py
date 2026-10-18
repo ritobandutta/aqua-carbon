@@ -4,7 +4,7 @@ Single source of truth for all physics, energy balances, water consumption,
 Scope 2 carbon, economic costs, and community impact indicators.
 """
 
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List, Optional, Tuple, Any
 from .models import (
     CoolingType, Season, WorkloadType, FacilityLedger, CommunityLedger,
     CommunityIndicator, BurdenShiftScores, ProfileAssessment,
@@ -364,78 +364,112 @@ def evaluate_scenario(scenario: ScenarioInput) -> Dict[str, ProfileAssessment]:
     return assessments
 
 
+_CONFIDENCE_RANK = {
+    DataConfidence.UNAVAILABLE: 0,
+    DataConfidence.LOW: 1,
+    DataConfidence.MEDIUM: 2,
+    DataConfidence.HIGH: 3,
+}
+
+
+def _overshoot_text(overshoot: float, label: str) -> str:
+    if label == "data confidence":
+        return f"{int(overshoot)} confidence level(s) below the requirement"
+    return f"{overshoot * 100:.0f}% over its limit"
+
+
+def _lowest_confidence(cl: CommunityLedger) -> DataConfidence:
+    indicators = [
+        cl.water_headroom_share_pct, cl.household_water_equivalent_count, cl.aquifer_stress_classification,
+        cl.substation_peak_demand_share_pct, cl.grid_carbon_intensity, cl.grid_outage_risk_index,
+        cl.tanker_dependency_index, cl.municipal_water_rationing_status,
+    ]
+    return min((i.confidence for i in indicators), key=lambda c: _CONFIDENCE_RANK[c])
+
+
 def run_constraint_planner(
     scenario: ScenarioInput,
     constraints: PlannerConstraints
 ) -> PlannerOutput:
+    """
+    Filters profiles against facility and community limits. Every message is derived from the
+    actual constraint check; nothing here is canned. If no profile is feasible, the output names
+    the binding constraint(s) and the profile that comes closest (smallest worst-case overshoot).
+    """
     assessments = evaluate_scenario(scenario)
     feasible_list: List[ProfileAssessment] = []
     infeasible_list: List[ConstraintCheckResult] = []
+    closest: Optional[Tuple[float, str, str]] = None  # (worst overshoot, profile name, constraint label)
 
-    for c_type_str, assessment in assessments.items():
+    for assessment in assessments.values():
         fl = assessment.facility_ledger
         cl = assessment.community_ledger
         violations: List[str] = []
         satisfactions: List[str] = []
+        overshoots: List[Tuple[float, str]] = []  # (fractional overshoot, constraint label)
 
-        # Check facility limits
-        if constraints.max_pue is not None:
-            if fl.pue > constraints.max_pue:
-                violations.append(f"PUE {fl.pue:.2f} exceeds limit {constraints.max_pue:.2f}")
+        def check(label: str, actual: Optional[float], limit: Optional[float], text: str) -> None:
+            if limit is None or actual is None:
+                return
+            if actual > limit:
+                violations.append(f"{text} exceeds limit")
+                overshoots.append(((actual - limit) / max(abs(limit), 1e-9), label))
             else:
-                satisfactions.append(f"PUE {fl.pue:.2f} satisfies limit {constraints.max_pue:.2f}")
+                satisfactions.append(f"{text} within limit")
 
-        if constraints.max_cooling_cost_inr_crores is not None:
-            if fl.annual_operating_cost_inr_crores > constraints.max_cooling_cost_inr_crores:
-                violations.append(f"Operating cost ₹{fl.annual_operating_cost_inr_crores:.2f} Cr exceeds budget ₹{constraints.max_cooling_cost_inr_crores:.2f} Cr")
+        check("PUE", fl.pue, constraints.max_pue, f"PUE {fl.pue:.2f} vs {constraints.max_pue}")
+        check("operating cost", fl.annual_operating_cost_inr_crores, constraints.max_cooling_cost_inr_crores,
+              f"Operating cost INR {fl.annual_operating_cost_inr_crores:.2f} Cr vs {constraints.max_cooling_cost_inr_crores} Cr")
+        check("annual water", fl.direct_water_consumption_ml, constraints.max_annual_water_ml,
+              f"Direct water {fl.direct_water_consumption_ml:.1f} ML vs {constraints.max_annual_water_ml} ML")
+        check("community water headroom share", cl.water_headroom_share_pct.value, constraints.max_water_headroom_share_pct,
+              f"Water headroom share {cl.water_headroom_share_pct.value}% vs {constraints.max_water_headroom_share_pct}%")
+        check("substation peak share", cl.substation_peak_demand_share_pct.value, constraints.max_grid_peak_share_pct,
+              f"Substation peak share {cl.substation_peak_demand_share_pct.value}% vs {constraints.max_grid_peak_share_pct}%")
+
+        if constraints.min_data_confidence is not None:
+            lowest = _lowest_confidence(cl)
+            if _CONFIDENCE_RANK[lowest] < _CONFIDENCE_RANK[constraints.min_data_confidence]:
+                violations.append(
+                    f"Lowest indicator confidence '{lowest.value}' is below required '{constraints.min_data_confidence.value}'"
+                )
+                overshoots.append((
+                    float(_CONFIDENCE_RANK[constraints.min_data_confidence] - _CONFIDENCE_RANK[lowest]),
+                    "data confidence",
+                ))
             else:
-                satisfactions.append(f"Operating cost ₹{fl.annual_operating_cost_inr_crores:.2f} Cr meets budget")
+                satisfactions.append(f"Lowest indicator confidence '{lowest.value}' meets the requirement")
 
-        if constraints.max_annual_water_ml is not None:
-            if fl.direct_water_consumption_ml > constraints.max_annual_water_ml:
-                violations.append(f"Direct water {fl.direct_water_consumption_ml:.1f} ML exceeds ceiling {constraints.max_annual_water_ml:.1f} ML")
-            else:
-                satisfactions.append(f"Direct water {fl.direct_water_consumption_ml:.1f} ML satisfies ceiling")
-
-        # Check community limits
-        if constraints.max_water_headroom_share_pct is not None:
-            headroom_val = cl.water_headroom_share_pct.value or 0.0
-            if headroom_val > constraints.max_water_headroom_share_pct:
-                violations.append(f"Community water headroom impact {headroom_val:.1f}% exceeds community limit {constraints.max_water_headroom_share_pct:.1f}%")
-            else:
-                satisfactions.append(f"Water headroom share {headroom_val:.1f}% within community limit")
-
-        if constraints.max_grid_peak_share_pct is not None:
-            grid_share = cl.substation_peak_demand_share_pct.value or 0.0
-            if grid_share > constraints.max_grid_peak_share_pct:
-                violations.append(f"Substation peak share {grid_share:.1f}% exceeds grid limit {constraints.max_grid_peak_share_pct:.1f}%")
-            else:
-                satisfactions.append(f"Substation peak share {grid_share:.1f}% satisfies grid limit")
-
-        if len(violations) == 0:
+        if not violations:
             feasible_list.append(assessment)
-        else:
-            nearest = "Closest trade-off requires relaxing " + (
-                "water headroom constraint" if "water" in violations[0].lower() else "PUE or grid constraint"
-            )
-            infeasible_list.append(ConstraintCheckResult(
-                cooling_type=assessment.cooling_type,
-                cooling_name=assessment.cooling_name,
-                is_feasible=False,
-                violations=violations,
-                satisfactions=satisfactions,
-                nearest_tradeoff=nearest
-            ))
+            continue
 
-    if len(feasible_list) > 0:
-        verdict = f"Found {len(feasible_list)} viable cooling configuration(s) satisfying all facility and community constraints."
+        worst, worst_label = max(overshoots)
+        infeasible_list.append(ConstraintCheckResult(
+            cooling_type=assessment.cooling_type,
+            cooling_name=assessment.cooling_name,
+            is_feasible=False,
+            violations=violations,
+            satisfactions=satisfactions,
+            nearest_tradeoff=(
+                f"Binding constraint: {worst_label} ({_overshoot_text(worst, worst_label)}). "
+                f"Relaxing it is the smallest change that could make this profile feasible."
+            ),
+        ))
+        if closest is None or worst < closest[0]:
+            closest = (worst, assessment.cooling_name, worst_label)
+
+    if feasible_list:
+        names = ", ".join(a.cooling_name for a in feasible_list)
+        verdict = f"Found {len(feasible_list)} viable cooling configuration(s) satisfying all constraints: {names}."
         refusal = None
     else:
-        verdict = "INSUFFICIENT_FEASIBLE_SET: No single cooling profile meets every facility and community threshold simultaneously."
+        verdict = "INSUFFICIENT_FEASIBLE_SET: No cooling profile meets every constraint simultaneously."
         refusal = (
-            "Refusal to manufacture an ungrounded compromise. In this water-stressed region, evaporative cooling breaches "
-            "the community water headroom constraint, while dry cooling breaches the facility PUE / grid peak constraint. "
-            "Consider Hybrid Adiabatic cooling with secondary treated wastewater supply or relaxing grid peak thresholds."
+            "No recommendation is made because no evaluated profile satisfies every constraint. "
+            + (f"Closest: {closest[1]} (binding constraint: {closest[2]}, {_overshoot_text(closest[0], closest[2])}). "
+               if closest else "")
+            + "Relax one of the limits above or change the scenario; see per-profile violations."
         )
 
     return PlannerOutput(

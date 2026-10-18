@@ -2,11 +2,12 @@
 End-to-end integration and UI element verification test suite.
 """
 
-import os
-import httpx
 import pytest
+from fastapi.testclient import TestClient
+from api.main import app
 
-BASE_URL = "http://127.0.0.1:8000"
+# In-process client: no live server and no fixed port needed.
+client = TestClient(app)
 
 
 def test_html_ui_components_exist():
@@ -43,7 +44,7 @@ def test_html_ui_components_exist():
 
 
 def test_api_health():
-    r = httpx.get(f"{BASE_URL}/api/health")
+    r = client.get("/api/health")
     assert r.status_code == 200
     assert r.json()["cloud_run_ready"] is True
 
@@ -59,7 +60,7 @@ def test_api_recalculate_scenario_flow():
         "grid_carbon_factor_kg_per_mwh": 710.0,
         "selected_profiles": ["evaporative", "dry_cooling", "hybrid_adiabatic"]
     }
-    r = httpx.post(f"{BASE_URL}/api/scenario/evaluate", json=payload)
+    r = client.post("/api/scenario/evaluate", json=payload)
     assert r.status_code == 200
     data = r.json()
     assert len(data["assessments"]) == 3
@@ -67,13 +68,13 @@ def test_api_recalculate_scenario_flow():
 
     # Test dynamic scaling to 35 MW
     payload["it_capacity_mw"] = 35.0
-    r35 = httpx.post(f"{BASE_URL}/api/scenario/evaluate", json=payload)
+    r35 = client.post("/api/scenario/evaluate", json=payload)
     assert r35.status_code == 200
     assert r35.json()["assessments"]["evaporative"]["facility_ledger"]["it_capacity_mw"] == 35.0
 
 
 def test_api_coverage_check_flow():
-    r = httpx.get(f"{BASE_URL}/api/coverage-check/bengaluru")
+    r = client.get("/api/coverage-check/bengaluru")
     assert r.status_code == 200
     cov = r.json()
     assert cov["disparity_ratio"] == 1.83
@@ -95,13 +96,13 @@ def test_api_planner_flow():
         "scenario": scenario,
         "constraints": {"max_pue": 1.50, "max_water_headroom_share_pct": 60.0}
     }
-    r = httpx.post(f"{BASE_URL}/api/scenario/planner", json=payload)
+    r = client.post("/api/scenario/planner", json=payload)
     assert r.status_code == 200
     assert len(r.json()["feasible_configurations"]) > 0
 
 
 def test_api_tamper_demo_flow():
-    r = httpx.get(f"{BASE_URL}/api/evals/tamper-demo")
+    r = client.get("/api/evals/tamper-demo")
     assert r.status_code == 200
     tdata = r.json()
     assert tdata["action_taken"] == "BLOCKED_PUBLICATION"
@@ -109,6 +110,6 @@ def test_api_tamper_demo_flow():
 
 
 def test_api_evals_flow():
-    r = httpx.get(f"{BASE_URL}/api/evals/run")
+    r = client.get("/api/evals/run")
     assert r.status_code == 200
     assert r.json()["all_passed"] is True

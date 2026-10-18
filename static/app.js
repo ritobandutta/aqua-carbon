@@ -600,7 +600,7 @@ async function runPlanner() {
     let html = `
       <div class="planner-verdict-box ${verdictClass}">
         <strong>${data.summary_verdict}</strong>
-        ${data.refusal_reason ? `<p style="margin-top:0.5rem; font-size:0.85rem;">${data.refusal_reason}</p>` : ""}
+        ${data.refusal_reason ? `<p style="margin-top:0.5rem; font-size:0.85rem;">${escapeHtml(data.refusal_reason)}</p>` : ""}
       </div>
     `;
 
@@ -676,7 +676,7 @@ async function runInvestigation() {
 
     output.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-        <span style="font-size:0.8rem; color:#38bdf8; font-weight:600;">Query: "${data.query}"</span>
+        <span style="font-size:0.8rem; color:#38bdf8; font-weight:600;">Query: "${escapeHtml(data.query)}"</span>
         <span class="verifier-badge success">
           <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
           ${data.verification_signature}
@@ -788,9 +788,19 @@ async function runLiveEvals() {
 }
 
 // Lightweight Markdown Formatter
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// Model output is untrusted: escape it first, then apply the markdown subset below.
 function simpleMarkdownToHtml(md) {
   if (!md) return "";
-  let html = md
+  let html = escapeHtml(md)
     .replace(/^### (.*$)/gim, '<h3>$1</h3>')
     .replace(/^## (.*$)/gim, '<h2>$1</h2>')
     .replace(/^# (.*$)/gim, '<h1>$1</h1>')

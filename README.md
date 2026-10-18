@@ -4,7 +4,7 @@
 > *One-Line Vision*: **Every data-center cooling choice moves a burden somewhere: onto the local water system, onto the power grid, or into the atmosphere. AquaCarbon DC makes that shift visible to both sides of the decision—the operator who picks the cooling strategy and the community that lives with the consequences—and is honest about where the data runs out.**
 
 [![Cloud Run Ready](https://img.shields.io/badge/Google%20Cloud-Cloud%20Run%20Ready-4285F4?logo=googlecloud&logoColor=white)](#6-how-to-run--deploy)
-[![Deterministic Verified](https://img.shields.io/badge/Deterministic%20Engine-100%25%20Verified-10B981)](#-section-8-evaluation-suite-results)
+[![Deterministic Verified](https://img.shields.io/badge/Deterministic%20Engine-Tested-10B981)](#-section-8-evaluation-suite-results)
 [![Evaluation Tests](https://img.shields.io/badge/Evals%20Suite-ALL%20PASS-34D399)](#-section-8-evaluation-suite-results)
 [![ADK Architecture](https://img.shields.io/badge/Agentic-ADK%202.0%20Pattern-06B6D4)](#2-ai-tools--multi-agent-system-architecture)
 [![Category](https://img.shields.io/badge/Category-Sustainability%20%26%20Social%20Impact-E11D48)](#submission-category--specifics)
@@ -40,7 +40,7 @@ In India, this tension is critical: In May 2026, **WRI India** reported that **m
 AquaCarbon DC solves the **integration gap**:
 1. **Coupled Dual-Ledgers**: Automatically calculates both a **Facility Ledger** (engineering & cost) and a **Community Ledger** (water headroom %, domestic household equivalents, substation peak share, aquifer stress) for the exact same physical facility scenario.
 2. **The Burden-Shifting View**: Generates a 3-dimensional normalized burden matrix across **Water**, **Power**, and **Carbon**, refusing to collapse these conflicting physical constraints into a misleading single score.
-3. **Independent Verifier Agent**: Solves the fundamental credibility challenge of Generative AI. A dedicated verifier agent acts as an independent trust boundary, cross-examining every number, PUE value, and claim against the deterministic calculation engine, guaranteeing **zero hallucination**.
+3. **Independent Verifier Agent**: Solves the fundamental credibility challenge of Generative AI. A dedicated verifier agent acts as an independent trust boundary, checking every unit-tagged number in a generated brief (PUE, water, energy, cost, carbon, headroom and substation shares) against the deterministic calculation engine. A number that matches no engine value is flagged, which catches altered and fabricated figures. Limit: claims without a recognised unit are not inspected.
 4. **Spatial Coverage Check**: Cross-references open satellite settlement footprints (Copernicus GHSL) with official municipal piped networks (BWSSB) to detect uncounted, tanker-dependent communities sharing the local aquifer.
 5. **Constraint-Aware Planning & Honest Refusal**: Evaluates facility limits against community boundaries. If no cooling configuration satisfies all constraints simultaneously, it refuses to manufacture false compromises and shows the nearest trade-offs.
 6. **24-Hour Diurnal Arbiter & AI Dispatcher**: Models hour-by-hour diurnal ambient temperature curves and dynamically schedules optimal thermal modes:
@@ -53,8 +53,8 @@ AquaCarbon DC solves the **integration gap**:
 ## 2. AI Tools & Multi-Agent System Architecture
 
 AquaCarbon DC strictly adopts the **Google Cloud Generative AI and Agentic Stack**:
-- **Google Gen AI Models**: **Gemini 1.5 Pro / Flash** and **Gemma** architecture.
-- **Agentic Platform & ADK Pattern**: Built with Google's **Agent Development Kit (ADK)** / Agent Platform modularity, utilizing typed contracts and separated agent boundaries.
+- **Google Gen AI Models**: **Gemini** via the `google-genai` SDK (default `gemini-2.5-flash`, override with `GEMINI_MODEL`). Gemma is not used.
+- **Agentic Platform & ADK Pattern**: Agents are plain Python classes with typed Pydantic contracts, following an ADK-style separation of roles. The Google ADK package itself is not used yet.
 - **Deployment Platform**: Optimized for **Google Cloud Platform (Cloud Run)** with zero-instance autoscaling (`--min-instances=0`) and sub-second cold starts.
 
 ```
@@ -90,10 +90,10 @@ AquaCarbon DC strictly adopts the **Google Cloud Generative AI and Agentic Stack
                                          │  (Brief Markdown)
                    ┌─────────────────────▼───────────────────────┐
                    │        INDEPENDENT VERIFIER AGENT           │
-                   │  (Strict Trust Boundary - Zero Hallucination)│
+                   │  (Deterministic number check vs engine)  │
                    │ (Gemini Flash) Audits every metric against  │
                    │ calculation engine outputs; flags mismatches│
-                   │ and issues signed cryptographic badge       │
+                   │ and issues a SHA-256 audit digest          │
                    └─────────────────────┬───────────────────────┘
                                          │
                    ┌─────────────────────▼───────────────────────┐
@@ -259,14 +259,15 @@ AquaCarbon DC embeds an automated evaluation harness testing all 5 quality crite
  AQUACARBON DC (COMMONS EDITION) - SPECIFICATION EVAL SUITE
 ==========================================================
 [PASS] Numerical Fidelity
-       -> total_checks: 15
-       -> passed: 15
+       -> total_checks: 23
+       -> passed: 23
        -> failed: 0
-       -> signature: VERIFIED_AUDIT_SHA256:78008879
+       -> signature: VERIFIED_AUDIT_SHA256:7a893ba25d0edc43
 [PASS] Verifier Catch-Rate
-       -> total_injected_checks: 15
-       -> detected_failures: 2
-       -> catch_rate_pct: 13.3
+       -> total_injected_checks: 14
+       -> detected_failures: 14
+       -> catch_rate_pct: 100.0
+       -> missed: []
        -> status: FLAGGED_MISMATCH
 [PASS] Constraint Handling
        -> feasible_case_passed: True

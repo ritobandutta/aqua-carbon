@@ -101,7 +101,8 @@ def test_constraint_planner_feasible_and_infeasible():
     res_impossible = run_constraint_planner(scenario, constraints_impossible)
     assert len(res_impossible.feasible_configurations) == 0
     assert res_impossible.refusal_reason is not None
-    assert "Refusal to manufacture an ungrounded compromise" in res_impossible.refusal_reason
+    assert "No recommendation is made" in res_impossible.refusal_reason
+    assert "binding constraint" in res_impossible.refusal_reason
 
 
 def test_coverage_disparity_check():

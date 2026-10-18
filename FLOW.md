@@ -49,7 +49,7 @@ This document details the internal architecture, mathematical pipeline, and data
 │  │  • Generates Community Brief (Household Equivalents, 5 Hearing Questions)   │  │
 │  └─────────────────────────────────────────────────────────────────────────────┘  │
 │             │                                                                     │
-│             │ Step E: STRICT TRUST BOUNDARY AUDIT (Zero Hallucination)             │
+│             │ Step E: STRICT TRUST BOUNDARY AUDIT (deterministic number check)             │
 │             ▼                                                                     │
 │  ┌─────────────────────────────────────────────────────────────────────────────┐  │
 │  │                INDEPENDENT VERIFIER AGENT (agents/verifier_agent.py)        │  │
@@ -65,7 +65,7 @@ This document details the internal architecture, mathematical pipeline, and data
    ├── Renders 3-Bar Burden Matrix (Water vs Power vs Carbon)
    ├── Updates Side-by-Side Dual Ledgers (Facility vs Community)
    ├── Renders Spatial Coverage Disparity Map & Vulnerability Alerts
-   ├── Displays Verified Dual Briefs with Cryptographic Badge
+   ├── Displays Verified Dual Briefs with SHA-256 Audit Digest
    └── Enables Live Evals Modal & 15% Hallucination Tamper Test
 ```
 
@@ -168,8 +168,8 @@ Located in [`evals/run_evals.py`](file:///c:/Users/manju/aqua-carbon/evals/run_e
 
 | Eval Check | What It Measures | Target Pass Criterion | Observed Result |
 | :--- | :--- | :--- | :---: |
-| **1. Numerical Fidelity** | Compares every number in generated briefs against deterministic engine outputs. | 100% match across all 15 key metrics. | **15/15 PASS** |
-| **2. Verifier Catch-Rate** | Deliberately mutates numbers in briefs (e.g. changing PUE from 1.20 to 1.02 and water from 275.9 ML to 15.0 ML). | Verifier must flag tampering as `FLAGGED_MISMATCH` and block publication. | **100% Catch Rate (PASS)** |
+| **1. Numerical Fidelity** | Compares every number in generated briefs against deterministic engine outputs. | Every required metric cited exactly, and every unit-tagged number traces to an engine value. | **23/23 PASS** |
+| **2. Verifier Catch-Rate** | Deliberately mutates numbers in briefs (e.g. changing PUE from 1.20 to 1.02 and water from 275.9 ML to 15.0 ML). | Each single-metric +15% corruption, and one fabricated claim, must be flagged `FLAGGED_MISMATCH`. | **14/14 injected errors caught (PASS)** |
 | **3. Constraint Handling** | Runs planner with feasible limits, then with impossible limits (PUE < 1.15 AND water < 10 ML). | Must return feasible sets on viable constraints, and return an honest refusal on impossible cases. | **PASS** |
 | **4. Coverage Check** | Tests spatial layers for unmapped populations. | Must detect disparity ratio $> 1.25$ and recommend at least 3 community actions. | **Ratio 1.83 (PASS)** |
 | **5. Recommendation Stability** | Compares Dry Summer vs Monsoon climate scenarios. | Summer direct water must exceed monsoon water, and summer dry-cooling PUE must exceed monsoon PUE. | **Water: 344.9 vs 248.4 ML (PASS)** |

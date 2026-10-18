@@ -1,51 +1,156 @@
 """
 Independent Verifier Agent for AquaCarbon DC — Commons Edition (v2).
-Acts as an independent trust boundary checking every numerical claim, PUE, water volume,
-carbon tonnage, and cost figure in generated briefs against the deterministic engine output.
-Blocks or flags any hallucinations or ungrounded statistics.
+Acts as an independent trust boundary: every unit-tagged number in a generated text must
+trace back to a deterministic engine value, and every headline engine value the briefs are
+required to cite must actually appear.
+
+Two complementary checks:
+1. Presence: PUE, direct water, Scope 2 carbon and operating cost for each profile must be
+   cited exactly (to the printed precision).
+2. Claims: every unit-tagged number found in the text (PUE, ML, MWh, INR Cr, tCO2e, % of
+   substation, % of water headroom) must match an engine value or a simple difference of two
+   engine values (for example a power penalty). Numbers that match nothing are flagged,
+   which catches fabricated additions as well as altered values.
+
+Limit: only numbers that carry one of the recognised units are inspected. Free-form claims
+without those units are not checked.
 """
 
+import hashlib
+import json
 import re
 from datetime import datetime, timezone
+from itertools import combinations
 from typing import Dict, List, Tuple
 from engine.models import ProfileAssessment, VerificationReport, VerificationCheckItem
 
+_NUM = r'(?<![0-9.])([0-9]+(?:\.[0-9]+)?)'
 
-def extract_numbers_with_context(text: str) -> List[Tuple[str, float]]:
-    """
-    Extracts floating point values and key nearby identifiers from text.
-    """
-    matches: List[Tuple[str, float]] = []
-    # Search for patterns like "PUE of 1.20", "1.45 PUE", "275.9 ML", "₹120.5 Cr", etc.
-    patterns = [
-        (r'pue\s*(?:of|is|:)?\s*([0-9]+\.[0-9]+)', 'pue'),
-        (r'([0-9]+\.[0-9]+)\s*pue', 'pue'),
-        (r'([0-9]+(?:\.[0-9]+)?)\s*(?:ml|megaliters)', 'water_ml'),
-        (r'([0-9]+(?:\.[0-9]+)?)\s*(?:mwh)', 'energy_mwh'),
-        (r'(?:₹|inr)\s*([0-9]+(?:\.[0-9]+)?)\s*(?:cr|crore)', 'cost_cr'),
-        (r'([0-9]+(?:\.[0-9]+)?)\s*(?:tonnes|tco2)', 'carbon_t'),
-        (r'([0-9]+(?:\.[0-9]+)?)\s*%\s*(?:of\s*(?:the\s*)?(?:local\s*)?(?:substation|grid|feeder))', 'substation_pct'),
-        (r'([0-9]+(?:\.[0-9]+)?)\s*%\s*(?:of\s*(?:the\s*)?(?:utility|industrial)?\s*water\s*headroom)', 'headroom_pct'),
-    ]
+_CLAIM_PATTERNS: List[Tuple[str, str]] = [
+    ('pue', rf'pue\s*(?:of|is|to|at|reaches|=|:)?\s*{_NUM}'),
+    ('pue', rf'{_NUM}\s*pue'),
+    ('water_ml', rf'{_NUM}\s*(?:million liters|megaliters|ml\b)'),
+    ('energy_mwh', rf'{_NUM}\s*mwh'),
+    ('cost_cr', rf'(?:₹|inr)\s*{_NUM}\s*(?:cr\b|crore)'),
+    ('carbon_t', rf'{_NUM}\s*(?:tonnes|tco2)'),
+    ('substation_pct', rf'{_NUM}\s*%\s*of\s*(?:the\s*)?(?:local\s*)?(?:[0-9/]+kv\s*)?(?:electrical\s*)?(?:substation|grid|feeder)'),
+    ('headroom_pct', rf'{_NUM}\s*%\s*of\s*(?:the\s*)?(?:local\s*)?(?:(?:utility|industrial|municipal)\s*)*water\s*(?:headroom|buffer)'),
+]
 
-    lower = text.lower()
-    for pat, label in patterns:
-        for m in re.finditer(pat, lower):
-            try:
-                val = float(m.group(1))
-                matches.append((label, val))
-            except (ValueError, IndexError):
-                continue
-    return matches
+
+def _normalize(text: str) -> str:
+    """Lowercase, drop markdown emphasis and thousands separators so numbers compare cleanly."""
+    t = text.lower().replace('*', '')
+    return re.sub(r'(?<=\d),(?=\d{3})', '', t)
+
+
+def _decimals(num_str: str) -> int:
+    return len(num_str.split('.')[1]) if '.' in num_str else 0
+
+
+def _contains_number(normalized_text: str, num_str: str) -> bool:
+    """True if num_str appears as a whole number (not as part of a longer one)."""
+    return re.search(rf'(?<![0-9.]){re.escape(num_str)}(?![0-9])', normalized_text) is not None
+
+
+def extract_claims(text: str) -> List[Tuple[str, str]]:
+    """Returns de-duplicated (label, number-string) pairs for every unit-tagged number."""
+    norm = _normalize(text)
+    seen = set()
+    claims: List[Tuple[str, str]] = []
+    for label, pat in _CLAIM_PATTERNS:
+        for m in re.finditer(pat, norm):
+            key = (label, m.group(1))
+            if key not in seen:
+                seen.add(key)
+                claims.append(key)
+    return claims
+
+
+def _allowed_values(assessments: Dict[str, ProfileAssessment]) -> Dict[str, List[float]]:
+    fl = [a.facility_ledger for a in assessments.values()]
+    cl = [a.community_ledger for a in assessments.values()]
+
+    def with_diffs(vals: List[float]) -> List[float]:
+        return list(vals) + [abs(a - b) for a, b in combinations(vals, 2)]
+
+    def present(vals):
+        return [v for v in vals if v is not None]
+
+    return {
+        'pue': [f.pue for f in fl],
+        'water_ml': with_diffs([f.direct_water_consumption_ml for f in fl]),
+        'energy_mwh': (
+            with_diffs([f.total_facility_energy_mwh for f in fl])
+            + [f.cooling_energy_mwh for f in fl]
+            + [f.annual_it_energy_mwh for f in fl]
+        ),
+        'cost_cr': (
+            with_diffs([f.annual_operating_cost_inr_crores for f in fl])
+            + [f.electricity_cost_inr_crores for f in fl]
+            + [f.water_cost_inr_crores for f in fl]
+        ),
+        'carbon_t': with_diffs([f.scope2_carbon_tonnes for f in fl]),
+        'substation_pct': present([c.substation_peak_demand_share_pct.value for c in cl]),
+        'headroom_pct': present([c.water_headroom_share_pct.value for c in cl]),
+    }
+
+
+def _matches(claimed: str, candidates: List[float]) -> bool:
+    d = _decimals(claimed)
+    tol = 0.5 * 10 ** (-d) + 1e-9
+    value = float(claimed)
+    return any(abs(value - c) <= tol for c in candidates)
+
+
+def _build_report(checks: List[VerificationCheckItem]) -> VerificationReport:
+    total = len(checks)
+    passed = sum(1 for c in checks if c.matched)
+    failed = total - passed
+    status = "PASSED" if failed == 0 else "FLAGGED_MISMATCH"
+    payload = json.dumps(
+        [[c.metric_name, c.claimed_value_in_brief, c.engine_calculated_value, c.matched] for c in checks],
+        sort_keys=True,
+    )
+    digest = hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
+    prefix = "VERIFIED_AUDIT_SHA256" if status == "PASSED" else "FLAGGED_AUDIT_SHA256"
+    return VerificationReport(
+        status=status,
+        total_checks=total,
+        passed_checks=passed,
+        failed_checks=failed,
+        checks=checks,
+        signature=f"{prefix}:{digest}",
+        verification_timestamp=datetime.now(timezone.utc).isoformat(),
+    )
 
 
 class VerifierAgent:
     """
     Independent verification service executing Section 8 fidelity checks.
+    Deterministic: the signature is a SHA-256 over the check results, so identical inputs
+    give an identical signature.
     """
 
-    def __init__(self, tolerance_pct: float = 0.5):
-        self.tolerance_pct = tolerance_pct
+    def _claim_checks(self, text: str, assessments: Dict[str, ProfileAssessment]) -> List[VerificationCheckItem]:
+        allowed = _allowed_values(assessments)
+        checks: List[VerificationCheckItem] = []
+        for label, num in extract_claims(text):
+            candidates = allowed.get(label, [])
+            ok = _matches(num, candidates)
+            nearest = min(candidates, key=lambda c: abs(c - float(num))) if candidates else None
+            checks.append(VerificationCheckItem(
+                metric_name=f"Claim check: {label}",
+                claimed_value_in_brief=num,
+                engine_calculated_value=(f"{nearest:.{_decimals(num)}f}" if nearest is not None else "n/a"),
+                matched=ok,
+                discrepancy_note=None if ok else f"{label} value {num} matches no engine output (nearest: {nearest})",
+            ))
+        return checks
+
+    def verify_text(self, text: str, assessments: Dict[str, ProfileAssessment]) -> VerificationReport:
+        """Claims-only check for free-form text such as an investigator answer."""
+        return _build_report(self._claim_checks(text, assessments))
 
     def verify_briefs(
         self,
@@ -53,90 +158,29 @@ class VerifierAgent:
         community_brief: str,
         assessments: Dict[str, ProfileAssessment]
     ) -> VerificationReport:
+        combined = operator_brief + "\n\n" + community_brief
+        norm = _normalize(combined)
         checks: List[VerificationCheckItem] = []
-        combined_text = (operator_brief + "\n\n" + community_brief).lower()
 
-        # Build ground-truth registry from deterministic engine
-        for c_type, assessment in assessments.items():
+        for assessment in assessments.values():
             fl = assessment.facility_ledger
-            cl = assessment.community_ledger
             prefix = assessment.cooling_type.value.upper()
 
-            # 1. PUE check
-            pue_val = fl.pue
-            pue_pattern = rf'{fl.pue:.2f}'
-            found_pue = pue_pattern in combined_text
-            checks.append(VerificationCheckItem(
-                metric_name=f"{prefix} PUE Metric",
-                claimed_value_in_brief=f"{fl.pue:.2f}" if found_pue else "Not found or altered",
-                engine_calculated_value=f"{fl.pue:.2f}",
-                matched=found_pue,
-                discrepancy_note=None if found_pue else f"Calculated PUE {fl.pue:.2f} not accurately cited in brief text"
-            ))
-
-            # 2. Water consumption (ML)
-            w_ml = fl.direct_water_consumption_ml
-            w_pattern = rf'{w_ml:.1f}'
-            found_w = w_pattern in combined_text or rf'{w_ml:.2f}' in combined_text
-            checks.append(VerificationCheckItem(
-                metric_name=f"{prefix} Annual Direct Water (ML)",
-                claimed_value_in_brief=f"{w_ml:.1f} ML" if found_w else "Not found or altered",
-                engine_calculated_value=f"{w_ml:.1f} ML",
-                matched=found_w,
-                discrepancy_note=None if found_w else f"Calculated water volume {w_ml:.1f} ML was altered or absent in text"
-            ))
-
-            # 3. Scope 2 Carbon (Tonnes CO2e)
-            c_t = fl.scope2_carbon_tonnes
-            c_str = f"{c_t:,.0f}".replace(",", "")
-            found_c = c_str in combined_text or f"{c_t:.0f}" in combined_text or f"{c_t:,.0f}" in combined_text
-            checks.append(VerificationCheckItem(
-                metric_name=f"{prefix} Scope 2 Carbon (tCO2e)",
-                claimed_value_in_brief=f"{c_t:,.0f} tCO2e" if found_c else "Verified in ranges",
-                engine_calculated_value=f"{c_t:,.0f} tCO2e",
-                matched=True,  # Text often rounds carbon to nearest thousand
-                discrepancy_note=None
-            ))
-
-            # 4. Operating Cost (INR Cr)
-            cost_cr = fl.annual_operating_cost_inr_crores
-            cost_pattern = f"{cost_cr:.2f}"
-            found_cost = cost_pattern in combined_text or f"{cost_cr:.1f}" in combined_text
-            checks.append(VerificationCheckItem(
-                metric_name=f"{prefix} Operating Cost (₹ Cr)",
-                claimed_value_in_brief=f"₹{cost_cr:.2f} Cr" if found_cost else f"₹{cost_cr:.1f} Cr cited",
-                engine_calculated_value=f"₹{cost_cr:.2f} Cr",
-                matched=found_cost,
-                discrepancy_note=None if found_cost else f"Calculated annual cost ₹{cost_cr:.2f} Cr not cited exactly"
-            ))
-
-            # 5. Community Headroom % check
-            if cl.water_headroom_share_pct.value is not None:
-                h_val = cl.water_headroom_share_pct.value
-                h_pattern = f"{h_val:.1f}%"
-                found_h = h_pattern in combined_text or f"{int(round(h_val))}%" in combined_text
+            required = [
+                (f"{prefix} PUE", f"{fl.pue:.2f}", f"{fl.pue:.2f}"),
+                (f"{prefix} Annual Direct Water (ML)", f"{fl.direct_water_consumption_ml:.1f}", f"{fl.direct_water_consumption_ml:.1f} ML"),
+                (f"{prefix} Scope 2 Carbon (tCO2e)", f"{fl.scope2_carbon_tonnes:.0f}", f"{fl.scope2_carbon_tonnes:,.0f} tCO2e"),
+                (f"{prefix} Operating Cost (INR Cr)", f"{fl.annual_operating_cost_inr_crores:.2f}", f"{fl.annual_operating_cost_inr_crores:.2f} Cr"),
+            ]
+            for name, needle, shown in required:
+                found = _contains_number(norm, needle)
                 checks.append(VerificationCheckItem(
-                    metric_name=f"{prefix} Community Water Headroom Share",
-                    claimed_value_in_brief=f"{h_val:.1f}%" if found_h else "Referenced in context",
-                    engine_calculated_value=f"{h_val:.1f}%",
-                    matched=True,
-                    discrepancy_note=None
+                    metric_name=name,
+                    claimed_value_in_brief=shown if found else "Not found or altered",
+                    engine_calculated_value=shown,
+                    matched=found,
+                    discrepancy_note=None if found else f"Engine value {shown} is absent or altered in the brief text",
                 ))
 
-        total = len(checks)
-        passed = sum(1 for c in checks if c.matched)
-        failed = total - passed
-
-        status = "PASSED" if failed == 0 else "FLAGGED_MISMATCH"
-        iso_time = datetime.now(timezone.utc).isoformat()
-        sig = f"VERIFIED_AUDIT_SHA256:{hash((total, passed, status, iso_time)) & 0xFFFFFFFF:08x}"
-
-        return VerificationReport(
-            status=status,
-            total_checks=total,
-            passed_checks=passed,
-            failed_checks=failed,
-            checks=checks,
-            signature=sig,
-            verification_timestamp=iso_time
-        )
+        checks.extend(self._claim_checks(combined, assessments))
+        return _build_report(checks)

@@ -99,7 +99,7 @@ Given:
 ### 6. Verification and Testing Plan
 As defined in Section 8 of the specification:
 1. **Numerical Fidelity Test**: Validates that all numbers referenced in briefs correspond exactly to deterministic engine outputs.
-2. **Verifier Catch-Rate Test**: Injects perturbed numbers into briefs and validates that the Verifier Agent flags 100% of discrepancies.
+2. **Verifier Catch-Rate Test**: Injects perturbed numbers into briefs and validates that the Verifier Agent flags every injected discrepancy (one corrupted metric at a time, plus a fabricated claim).
 3. **Constraint Planner Test**: Checks feasible vs. infeasible constraint boundaries.
 4. **Coverage Disparity Test**: Verifies flagging of unserved informal settlements when spatial footprint exceeds piped census records.
 5. **Recommendation Stability Test**: Confirms deterministic reproducibility under identical inputs and predictable flipping under changed environmental inputs (e.g., Dry Summer vs. Wet Monsoon).
