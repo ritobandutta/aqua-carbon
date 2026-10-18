@@ -14,13 +14,14 @@
 ## Quick Navigation
 1. [AI Objective & Project Details](#1-ai-objective--project-details)
 2. [AI Tools & Multi-Agent System Architecture](#2-ai-tools--multi-agent-system-architecture)
-3. [Judging Criteria Mapping (40% / 25% / 25% / 10%)](#3-judging-criteria-mapping)
+3. [Evaluation Criteria Mapping](#3-evaluation-criteria-mapping)
 4. [Submission Category & Specifics](#4-submission-category--specifics)
 5. [The Three Cooling Profiles & Thermodynamics](#5-the-three-cooling-profiles--thermodynamics)
-6. [How to Run & Deploy](#6-how-to-run--deploy)
-7. [Section 8 Evaluation Suite Results](#7-section-8-evaluation-suite-results)
-8. [Sample Testing Prompts for Judges](#8-sample-testing-prompts-for-judges)
-9. [Prior Art & References](#9-prior-art--references)
+6. [24-Hour Diurnal Arbiter & AI Dispatcher](#6-24-hour-diurnal-arbiter--ai-dispatcher)
+7. [How to Run & Deploy](#7-how-to-run--deploy)
+8. [Section 8 Evaluation Suite Results](#8-section-8-evaluation-suite-results)
+9. [Sample Testing Prompts for Evaluators](#9-sample-testing-prompts-for-evaluators)
+10. [Prior Art & References](#10-prior-art--references)
 
 ---
 
@@ -42,6 +43,10 @@ AquaCarbon DC solves the **integration gap**:
 3. **Independent Verifier Agent**: Solves the fundamental credibility challenge of Generative AI. A dedicated verifier agent acts as an independent trust boundary, cross-examining every number, PUE value, and claim against the deterministic calculation engine, guaranteeing **zero hallucination**.
 4. **Spatial Coverage Check**: Cross-references open satellite settlement footprints (Copernicus GHSL) with official municipal piped networks (BWSSB) to detect uncounted, tanker-dependent communities sharing the local aquifer.
 5. **Constraint-Aware Planning & Honest Refusal**: Evaluates facility limits against community boundaries. If no cooling configuration satisfies all constraints simultaneously, it refuses to manufacture false compromises and shows the nearest trade-offs.
+6. **24-Hour Diurnal Arbiter & AI Dispatcher**: Models hour-by-hour diurnal ambient temperature curves and dynamically schedules optimal thermal modes:
+   - **Night Economizer**: Powers mechanical chillers completely OFF when outside air enthalpy permits (PUE = 1.10, zero water consumed).
+   - **Midday AI Compute Load-Shifting**: Defers up to 40%–60% of non-critical AI batch training away from peak heat hours (12 PM–4 PM), shaving compressor lift and preventing substation brownouts.
+   - **Evening Substation Peak-Shaving**: Automatically trims cooling duty to protect neighborhood residential 66kV feeders during city peak hours (6 PM–9 PM).
 
 ---
 
@@ -102,9 +107,9 @@ AquaCarbon DC strictly adopts the **Google Cloud Generative AI and Agentic Stack
 
 ---
 
-## 3. Judging Criteria Mapping
+## 3. Evaluation Criteria Mapping
 
-| Judging Criterion | Weight | How AquaCarbon DC Matches & Excels |
+| Evaluation Criterion | Weight | How AquaCarbon DC Matches & Excels |
 | :--- | :---: | :--- |
 | **Technical Merit & Gen AI Implementation** | **40%** | • **Meaningful Gen AI**: Gen AI is not a superficial chatbot wrapper. Gemini Pro/Flash performs reasoning over physical constraints, synthesizes dual-audience briefs, and is verified by an independent agent.<br>• **Technical Soundness**: Physics-based deterministic calculation engine (ASHRAE TC 9.9, Karimi et al.) paired with automated Section 8 evaluation suite.<br>• **Scalability & Sustainability**: Ultra-lean container (<200MB), zero-instance downscaling on Google Cloud Run, sub-millisecond calculation engine, and zero continuous GPU costs. |
 | **Problem Alignment & Impact** | **25%** | • **Critical Social Impact**: Directly addresses the water crisis exacerbated by hyperscale data centers in water-stressed regions of the Global South (Bengaluru, Chennai, Mumbai).<br>• **Empowering Communities**: The Community Ledger translates technical megawatts into everyday terms (household water equivalents, tanker dependency index) and gives local ward committees 5 specific questions to ask at public environmental consultations. |
@@ -147,7 +152,32 @@ Based on published industry benchmarks (Karimi et al. 2022, ASHRAE TC 9.9, WRI I
 
 ---
 
-## 6. How to Run & Deploy
+## 6. 24-Hour Diurnal Arbiter & AI Dispatcher
+
+To address hour-by-hour operational dynamics and avoid simplistic 24/7 static assumptions, AquaCarbon DC incorporates an hourly thermal and computational dispatch engine:
+
+```
+                  ┌─────────────────────────────────────────────────────────┐
+                  │            24-HOUR ARBITER & AI DISPATCHER              │
+                  └────────────────────────────┬────────────────────────────┘
+                                               │
+     ┌──────────────────────┬──────────────────┴──────────────────┬─────────────────────┐
+     ▼                      ▼                                     ▼                     ▼
+00:00 - 06:00          07:00 - 11:00                         12:00 - 16:00         18:00 - 21:00
+Night Economizer       Morning Dry Chiller                   Peak Heat AI Shift    Substation Peak-Shave
+(Chillers Powered OFF) (Zero Water Consumed)                 (-40% Batch Compute + (Protects Neighborhood
+PUE 1.10 | 0 Water     PUE 1.28                              Adiabatic Pulse Mist) 66kV City Feeders)
+```
+
+### Key Technical Capabilities:
+1. **Diurnal Weather Tracking**: Models hour-by-hour thermodynamic shifts (ambient dry-bulb temperature and relative humidity) calibrated to local regional datasets.
+2. **Free-Cooling Economizer Automation**: Dynamically identifies cool hours when ambient enthalpy allows shutting down mechanical chillers completely, drawing 100% outside air with zero direct water consumption (PUE = 1.10).
+3. **AI Compute Load-Shifting**: Enables operators to define an AI batch flexibility threshold (e.g., 40%), automatically deferring non-urgent AI batch training jobs away from the 12:00–16:00 peak heat window and resuming them overnight when cooling is virtually free.
+4. **Substation Peak-Shaving**: Automatically trims facility cooling duty during 18:00–21:00 to prevent transformer overloads and brownouts on municipal residential feeders.
+
+---
+
+## 7. How to Run & Deploy
 
 ### A. Local Quick Start (Development & Testing)
 
@@ -220,7 +250,7 @@ gcloud run deploy aquacarbon-dc \
 
 ---
 
-## 7. Section 8 Evaluation Suite Results
+## 8. Section 8 Evaluation Suite Results
 
 AquaCarbon DC embeds an automated evaluation harness testing all 5 quality criteria from Section 8 of the product specification:
 
@@ -261,7 +291,7 @@ You can execute these checks dynamically anytime by clicking the **Run Live Eval
 
 ---
 
-## 8. Sample Testing Prompts for Judges
+## 9. Sample Testing Prompts for Evaluators
 
 When evaluating the **Agentic Investigator** tab in the live application, test these fact-grounded queries:
 
@@ -283,7 +313,7 @@ When evaluating the **Agentic Investigator** tab in the live application, test t
 
 ---
 
-## 9. Prior Art & References
+## 10. Prior Art & References
 
 - **WRI India (May 2026)**: *More Than Half of India's Data Centres Are in Water-Stressed Regions*.
 - **International Energy Agency (IEA)**: *Energy and AI: Energy Demand from AI & Data Centers*.
