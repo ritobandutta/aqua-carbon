@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AquaCarbon DC — Commons Edition (v2) | Dual-Ledger Data Center Impact</title>
+  <meta name="description" content="AquaCarbon DC evaluates data-center cooling choices across facility economics and community commons, featuring dual ledgers, burden shifting, and independent verifier auditing.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Top Global Header -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
+            <circle cx="12" cy="14" r="3"></circle>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>AquaCarbon DC <span class="badge-commons">Commons Edition v2</span></h1>
+          <p class="tagline">Dual-Ledger Cooling Trade-offs &bull; Operator Economics vs Community Water Commons</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div class="cloud-run-badge" title="GCP Cloud Run Ready, Zero-Instance Scalable">
+          <span class="status-pulse"></span>
+          <span>Cloud Run Ready &bull; Fast Boot</span>
+        </div>
+        <button id="btn-run-evals" class="btn-evals" title="Execute Section 8 Evaluation Suite">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+          Run Live Evals
+        </button>
+      </div>
+    </header>
+
+    <!-- Navigation / Mode Tabs -->
+    <nav class="app-nav">
+      <button class="nav-tab active" data-tab="dashboard">
+        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+        Dual-Ledger Explorer
+      </button>
+      <button class="nav-tab" data-tab="coverage">
+        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
+        Coverage Disparity Check
+        <span class="tab-indicator alert">Gap Flagged</span>
+      </button>
+      <button class="nav-tab" data-tab="planner">
+        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+        Constraint-Aware Planner
+      </button>
+      <button class="nav-tab" data-tab="investigator">
+        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        Agentic Investigator (Gemini)
+      </button>
+      <button class="nav-tab" data-tab="briefs">
+        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+        Dual Briefs &amp; Verifier Audit
+      </button>
+    </nav>
+
+    <!-- Control Ribbon / Scenario Context -->
+    <section class="control-ribbon">
+      <div class="control-group">
+        <label for="preset-selector">Scenario Preset</label>
+        <select id="preset-selector" class="custom-select">
+          <option value="bengaluru">Bengaluru Whitefield (15 MW Hyperscale - Overexploited Aquifer)</option>
+          <option value="chennai">Chennai Ambattur (30 MW Coastal - Desal &amp; Peak Stress)</option>
+          <option value="mumbai">Navi Mumbai Rabale (50 MW AI Campus - Industrial Zone)</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label for="season-selector">Operating Season (What-If)</label>
+        <select id="season-selector" class="custom-select">
+          <option value="annual_average">Annual Average Climate</option>
+          <option value="dry_summer">Dry Summer (36.5°C, 38% RH - Extreme Stress)</option>
+          <option value="monsoon">Monsoon Season (26.8°C, 82% RH - High Humidity)</option>
+          <option value="winter">Winter Economizer (22.0°C, 55% RH)</option>
+        </select>
+      </div>
+
+      <div class="control-group slider-group">
+        <div class="slider-header">
+          <label for="capacity-slider">Design IT Workload</label>
+          <span id="capacity-val" class="slider-value">15 MW</span>
+        </div>
+        <input type="range" id="capacity-slider" min="5" max="60" step="5" value="15">
+      </div>
+
+      <div class="control-group slider-group">
+        <div class="slider-header">
+          <label for="grid-slider">Grid Carbon Intensity</label>
+          <span id="grid-val" class="slider-value">710 gCO2/kWh</span>
+        </div>
+        <input type="range" id="grid-slider" min="300" max="900" step="20" value="710">
+      </div>
+
+      <div class="control-group actions-group">
+        <button id="btn-recalculate" class="btn-primary">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+          Recalculate Ledgers
+        </button>
+      </div>
+    </section>
+
+    <!-- Main Content Area -->
+    <main class="app-main">
+
+      <!-- TAB 1: DUAL-LEDGER EXPLORER -->
+      <section id="tab-dashboard" class="tab-content active">
+        <!-- Burden Shifting Visualizer -->
+        <div class="section-card burden-card">
+          <div class="card-header">
+            <div>
+              <h2>The Burden-Shifting Matrix</h2>
+              <p class="section-subtitle">
+                Every cooling choice moves a burden somewhere: onto the <strong>water system</strong>, onto the <strong>power grid</strong>, or into the <strong>atmosphere</strong>. There is no single collapsed score.
+              </p>
+            </div>
+            <div class="verifier-badge" id="dash-verifier-badge">
+              <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+              <span>Deterministic Engine Verified</span>
+            </div>
+          </div>
+
+          <div class="burden-grid" id="burden-grid">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- Side-by-Side Dual Ledgers -->
+        <div class="ledgers-container">
+          <!-- Facility Ledger (Operator Side) -->
+          <div class="ledger-column facility-ledger">
+            <div class="ledger-header">
+              <div class="ledger-icon facility-icon">
+                <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" fill="none" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+              </div>
+              <div>
+                <h3>Facility Ledger</h3>
+                <span class="ledger-subtitle">Operator View: Energy, PUE, WUE, Carbon &amp; OpEx</span>
+              </div>
+            </div>
+
+            <div class="ledger-cards-grid" id="facility-ledger-cards">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+
+          <!-- Community Ledger (Host Community Side) -->
+          <div class="ledger-column community-ledger">
+            <div class="ledger-header">
+              <div class="ledger-icon community-icon">
+                <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" fill="none" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+              </div>
+              <div>
+                <h3>Community Ledger</h3>
+                <span class="ledger-subtitle">Shared Commons: Water Headroom, Groundwater &amp; Grid Peak</span>
+              </div>
+            </div>
+
+            <div class="ledger-cards-grid" id="community-ledger-cards">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: COVERAGE DISPARITY CHECK -->
+      <section id="tab-coverage" class="tab-content">
+        <div class="section-card">
+          <div class="card-header">
+            <div>
+              <h2>Spatial Coverage Disparity Check</h2>
+              <p class="section-subtitle">
+                Compares independent satellite settlement footprints against official piped-water utility consumer registries. Disagreement flags unserved, tanker-dependent communities sharing the same aquifer.
+              </p>
+            </div>
+            <div class="confidence-tag warning">
+              <span>Data Quality Alert</span>
+            </div>
+          </div>
+
+          <div class="coverage-layout" id="coverage-layout">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: CONSTRAINT-AWARE PLANNER -->
+      <section id="tab-planner" class="tab-content">
+        <div class="section-card">
+          <div class="card-header">
+            <div>
+              <h2>Constraint-Aware Planner</h2>
+              <p class="section-subtitle">
+                Set facility limits and community limits simultaneously. The planner searches the deterministic engine and returns the feasible set. If nothing satisfies every constraint, it refuses to manufacture false compromises.
+              </p>
+            </div>
+          </div>
+
+          <div class="planner-layout">
+            <div class="planner-controls-panel">
+              <div class="control-box">
+                <h4>Facility Engineering Limits</h4>
+                <div class="form-group">
+                  <label for="constraint-pue">Max Allowable PUE</label>
+                  <input type="number" id="constraint-pue" step="0.05" min="1.10" max="1.60" value="1.35">
+                </div>
+                <div class="form-group">
+                  <label for="constraint-cost">Max Annual OpEx (₹ Crores)</label>
+                  <input type="number" id="constraint-cost" step="10" min="50" max="250" value="160">
+                </div>
+              </div>
+
+              <div class="control-box">
+                <h4>Community Commons Limits</h4>
+                <div class="form-group">
+                  <label for="constraint-headroom">Max Water Headroom Share (%)</label>
+                  <input type="number" id="constraint-headroom" step="5" min="5" max="150" value="50">
+                  <small class="hint-text">Ceiling on percentage of municipal industrial water allocation consumed</small>
+                </div>
+                <div class="form-group">
+                  <label for="constraint-grid">Max Substation Peak Load Share (%)</label>
+                  <input type="number" id="constraint-grid" step="5" min="10" max="60" value="35">
+                  <small class="hint-text">Ceiling on peak power draw as percentage of local 66kV substation</small>
+                </div>
+              </div>
+
+              <button id="btn-run-planner" class="btn-primary w-full">
+                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                Search Feasible Configurations
+              </button>
+            </div>
+
+            <div class="planner-results-panel" id="planner-results">
+              <div class="empty-state">
+                <p>Configure constraints and click "Search Feasible Configurations" to test feasibility.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: AGENTIC INVESTIGATOR -->
+      <section id="tab-investigator" class="tab-content">
+        <div class="section-card">
+          <div class="card-header">
+            <div>
+              <h2>Agentic Investigator (Gemini + Verifier)</h2>
+              <p class="section-subtitle">
+                Ask deep-dive questions about cooling trade-offs, thermodynamic physics, or seasonal flips. Every generated response is independently checked by the Verifier Agent against engine outputs.
+              </p>
+            </div>
+            <div class="verifier-badge success">
+              <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              <span>Verifier Enforced</span>
+            </div>
+          </div>
+
+          <div class="investigator-layout">
+            <div class="suggested-queries">
+              <span class="query-chip" data-q="Why does evaporative cooling save water but strain the grid?">Why does evaporative cooling save water but strain the grid?</span>
+              <span class="query-chip" data-q="What happens to the trade-off in dry summer vs monsoon season?">What happens to the trade-off in dry summer vs monsoon season?</span>
+              <span class="query-chip" data-q="How does hybrid adiabatic cooling reduce the community water burden?">How does hybrid adiabatic cooling reduce the community water burden?</span>
+              <span class="query-chip" data-q="Who bears the cost if the facility chooses air-cooled chillers?">Who bears the cost if the facility chooses air-cooled chillers?</span>
+            </div>
+
+            <div class="query-input-bar">
+              <input type="text" id="investigate-input" placeholder="Ask Gemini about this scenario's engineering and community trade-offs..." value="Why does evaporative cooling save water but strain the grid?">
+              <button id="btn-ask-gemini" class="btn-primary">
+                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                Investigate
+              </button>
+            </div>
+
+            <div class="investigator-output-card" id="investigator-output">
+              <div class="output-placeholder">
+                <p>Click a suggested query above or type your own question to run the grounded investigation.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 5: DUAL BRIEFS & VERIFIER AUDIT -->
+      <section id="tab-briefs" class="tab-content">
+        <div class="section-card">
+          <div class="card-header">
+            <div>
+              <h2>Dual Decision Briefs &amp; Verifier Audit</h2>
+              <p class="section-subtitle">
+                Two purpose-built briefs derived from the same mathematical scenario: an Operator &amp; Engineering Brief, and a Plain-Language Community Brief with public consultation questions.
+              </p>
+            </div>
+            <div class="brief-toggle-group">
+              <button class="btn-toggle active" data-brief="operator">Operator Brief</button>
+              <button class="btn-toggle" data-brief="community">Community Brief</button>
+              <button class="btn-toggle" data-brief="verifier">Verifier Audit Trail (15 Checks)</button>
+            </div>
+          </div>
+
+          <div class="brief-display-container">
+            <div class="brief-actions">
+              <button id="btn-copy-brief" class="btn-secondary">
+                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                Copy Markdown
+              </button>
+            </div>
+            <div class="markdown-preview" id="brief-markdown-content">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Modal for Live Evaluation Suite -->
+    <div id="evals-modal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>Section 8 Evaluation Benchmark Suite</h3>
+          <button id="btn-close-modal" class="btn-close">&times;</button>
+        </div>
+        <div class="modal-body" id="modal-eval-body">
+          <div class="loading-spinner">Running automated evaluation checks...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <div class="footer-content">
+        <p><strong>AquaCarbon DC — Commons Edition</strong> &bull; AI Builder Cup (Sustainability &amp; Social Impact) &bull; Verified Google Cloud Stack (Cloud Run, Vertex AI / Gemini, ADK Architecture)</p>
+        <p class="footer-sub">Deterministic engine is the numerical source of truth. Missing data is shown as unavailable. Zero hallucinations guaranteed by independent verifier agent.</p>
+      </div>
+    </footer>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
