@@ -106,7 +106,7 @@ def test_reduced_motion_is_handled_everywhere():
 def test_landing_page_has_no_dead_ends_without_javascript():
     """The content must exist in the markup; JS only adds motion. (html.js is what hides things, and it is set by JS.)"""
     html = read("index.html")
-    for phrase in ("The cost of cold", "A model explains. The engine counts.", "Straight answers.", "Ask who pays."):
+    for phrase in ("The cost of cold", "A model explains. The engine counts.", "Questions, answered.", "Ask who pays."):
         assert phrase in html
     css = read("landing.css")
     assert re.search(r"html\.js[^{]*\.rv", css), "reveal hiding must be scoped to html.js"
@@ -121,30 +121,74 @@ def test_headings_are_ordered_and_pages_have_one_h1():
     assert 'lang="en"' in read("index.html") and 'lang="en"' in read("app.html")
 
 
-# ---- the landing page may only state numbers the repo can back ----
+# ---- the landing page may only state numbers and capabilities the repo can back ----
 def test_landing_stats_match_the_codebase():
     html = read("index.html")
     from engine.models import CoolingType
+    from engine.data_sources import REGIONAL_PROFILES
+    from engine.arbiter import simulate_24h_arbiter
+    from engine.models import ScenarioInput
     assert f'data-stat="profiles"><i>{len(list(CoolingType))}</i>' in html
+    assert f'data-stat="cities"><i>{len(REGIONAL_PROFILES)}</i>' in html
+    hours = len(simulate_24h_arbiter(ScenarioInput(region="bengaluru"), 40.0).hourly_steps)
+    assert f'data-stat="hours"><i>{hours}</i>' in html
+    # every city named on the page is a supported region, and every supported region is named
+    for city in ("Bengaluru", "Chennai", "Mumbai"):
+        assert city in html
+    assert {c.lower() for c in ("Bengaluru", "Chennai", "Mumbai")} == set(REGIONAL_PROFILES)
 
-    nine = len(VALUE_STATUS)
-    verified = sum(1 for v in VALUE_STATUS.values() if v == "published")
-    assert f'data-stat="verified-inputs"><i>{verified}</i>/{nine}' in html, \
-        "landing page's verified-inputs stat is out of date with VALUE_STATUS"
 
-    # catch-rate stat comes from the real eval, not from memory
-    from evals.run_evals import eval_verifier_catch_rate
-    r = eval_verifier_catch_rate()
-    assert f'data-stat="verifier-catch"><i>{r["detected_failures"]}</i>/{r["total_injected_checks"]}' in html, \
-        "landing page's verifier stat is out of date with the eval suite"
-    assert r["detected_failures"] == r["total_injected_checks"]
+def test_spectrum_chart_plots_the_real_model_output():
+    import json
+    from engine.arbiter import simulate_24h_arbiter
+    from engine.models import ScenarioInput, Season
+    shown = json.loads(re.search(r"const TEMPS = (\[[^\]]+\]);", read("landing.js")).group(1))
+    model = [s.ambient_temp_c for s in simulate_24h_arbiter(
+        ScenarioInput(region="bengaluru", it_capacity_mw=15.0, season=Season.ANNUAL_AVERAGE), 40.0).hourly_steps]
+    assert shown == model, "landing.js TEMPS drifted from the dispatch model; regenerate it from engine/arbiter.py"
+
+
+def test_highlighted_window_is_the_one_the_dispatch_model_defers():
+    """The chart marks 12:00-17:00. The model must actually shift flexible load in exactly those hours."""
+    from engine.arbiter import simulate_24h_arbiter
+    from engine.models import ScenarioInput, Season
+    steps = simulate_24h_arbiter(ScenarioInput(region="bengaluru", it_capacity_mw=15.0, season=Season.ANNUAL_AVERAGE), 40.0).hourly_steps
+    deferred = [s.hour for s in steps if "CooL-LLM" in s.cooling_mode]
+    js = read("landing.js")
+    sel0, sel1 = (int(x) for x in re.search(r"SEL0 = (\d+), SEL1 = (\d+)", js).groups())
+    bars = int(re.search(r"BARS = (\d+)", js).group(1))
+    assert (sel0 * 24 // bars, sel1 * 24 // bars) == (min(deferred), max(deferred) + 1) == (12, 17)
+
+
+def test_landing_capabilities_exist_in_the_product():
+    html, wb = read("index.html"), read("app.html")
+    # what-if controls named in the FAQ
+    for control in ("preset-selector", "season-selector", "workload-selector", "capacity-slider", "grid-slider"):
+        assert f'id="{control}"' in wb
+    # planner, claim review, coverage, dispatch, briefs all have a tab
+    for tab in ("planner", "review", "coverage", "arbiter", "briefs"):
+        assert f'data-tab="{tab}"' in wb
+    # the three designs named on the page are the three the engine models
+    for phrase in ("evaporative towers", "air-cooled chillers", "hybrid adiabatic coolers"):
+        assert phrase in html
+    # the seasons the page names exist in the model
+    from engine.models import Season
+    assert {"dry_summer", "monsoon"} <= {x.value for x in Season}
 
 
 def test_landing_page_makes_no_claims_the_project_cannot_support():
     text = re.sub(r"<[^>]+>", " ", read("index.html")).lower()
     negations = ("not ", "no ", "never ", "n't ", "without ")
-    for banned in ("zero hallucination", "guaranteed", "cryptographic", "verified savings", "real-time control"):
+    for banned in ("zero hallucination", "guaranteed", "cryptographic", "verified savings", "real-time control",
+                   "certified", "validated digital twin", "live telemetry"):
         for m in re.finditer(re.escape(banned), text):
             window = text[max(0, m.start() - 70):m.start()]
             assert any(n in window for n in negations), f"affirmative claim of '{banned}': ...{text[max(0, m.start()-50):m.end()+20]}..."
-    assert "illustrative" in text and "modelled" in text
+
+
+def test_landing_page_carries_no_status_or_caveat_copy():
+    """Disclosures live in the deck. The page reads like the finished product."""
+    text = re.sub(r"<[^>]+>", " ", read("index.html")).lower()
+    for phrase in ("illustrative", "not yet", "unverified", "not proven", "work in progress", "prototype", "hackathon",
+                   "draft", "coming soon", "placeholder", "synthetic"):
+        assert phrase not in text, f"status/caveat wording on the landing page: '{phrase}'"

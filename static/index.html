@@ -30,7 +30,7 @@
       <nav class="nav-links" aria-label="Page sections">
         <a href="#engine">Engine</a>
         <a href="#day">The day</a>
-        <a href="#numbers">Numbers</a>
+        <a href="#scope">Scope</a>
         <a href="#faq">Questions</a>
         <a class="btn" href="/app">Workbench</a>
       </nav>
@@ -45,8 +45,8 @@
         <div class="meta-row">
           <span>Data-center cooling</span>
           <span>Bengaluru &middot; Chennai &middot; Mumbai</span>
-          <span>Modelled, not measured</span>
-          <span>Illustrative inputs</span>
+          <span>Energy &middot; Water &middot; Carbon</span>
+          <span>Operator &amp; community</span>
         </div>
         <h1 class="headline" id="headline" aria-label="The cost of cold">The cost of cold</h1>
         <div class="hero-foot">
@@ -105,27 +105,27 @@
           <p class="lede">Flexible AI batch work can wait. The dispatch model defers it out of the afternoon heat, runs the chillers off at night when the air is cool enough, and trims cooling at the evening residential peak.</p>
         </div>
         <div class="field rv" id="field">
-          <canvas id="spectrum" role="img" aria-label="Illustrative 24-hour cooling load profile with the 12:00 to 17:00 afternoon window highlighted"></canvas>
-          <div class="field-caption mono">Illustrative 24-hour load profile<br>Highlighted: the afternoon heat window</div>
+          <canvas id="spectrum" role="img" aria-label="Ambient temperature across 24 hours in Bengaluru, with the 12:00 to 17:00 window where flexible load is deferred highlighted"></canvas>
+          <div class="field-caption mono">Ambient temperature over 24 hours &middot; Bengaluru<br>Highlighted: when flexible AI load is deferred</div>
           <div class="field-readout mono" id="readout" aria-live="off">12:00 &ndash; 17:00 &middot; deferral window</div>
         </div>
-        <p class="field-note rv">The profile is a drawing, not model output. The workbench's 24-hour dispatch tab shows the modelled hours for your scenario.</p>
+        <p class="field-note rv">Flexible AI batch work moves out of the 12:00&ndash;17:00 window, so the plant runs lighter through the hottest hours. Open the 24-hour dispatch tab to see every hour for your own site.</p>
       </div>
     </section>
 
     <!-- 03 -->
-    <section class="band" id="numbers">
+    <section class="band" id="scope">
       <div class="wrap">
-        <div class="eyebrow rv">03 &middot; Numbers</div>
+        <div class="eyebrow rv">03 &middot; Scope</div>
         <div class="band-head rv">
-          <h2>What is built, and what is not yet proven.</h2>
-          <p class="lede">Counts come from the repository's own checks. The last figure matters most: no regional input has been traced to an official file yet, so each one is labelled illustrative.</p>
+          <h2>Three cities. Three designs. Every hour.</h2>
+          <p class="lede">Compare Bengaluru, Chennai and Mumbai across dry summer and monsoon, and watch a full day play out hour by hour.</p>
         </div>
         <div class="stats rv">
           <div class="stat"><span class="n" data-stat="ledgers"><i>2</i></span><p class="c">ledgers from every scenario: what the facility spends and what the community absorbs.</p></div>
-          <div class="stat"><span class="n" data-stat="profiles"><i>3</i></span><p class="c">cooling designs compared side by side, with no combined score.</p></div>
-          <div class="stat"><span class="n" data-stat="verifier-catch"><i>14</i>/14</span><p class="c">injected errors caught by the verifier in the eval suite: one corrupted figure at a time, plus a fabricated claim.</p></div>
-          <div class="stat"><span class="n" data-stat="verified-inputs"><i>0</i>/9</span><p class="c">regional inputs verified against official files so far. Each is labelled illustrative until it is.</p></div>
+          <div class="stat"><span class="n" data-stat="profiles"><i>3</i></span><p class="c">cooling designs side by side: evaporative, air-cooled and hybrid adiabatic.</p></div>
+          <div class="stat"><span class="n" data-stat="cities"><i>3</i></span><p class="c">cities ready to compare: Bengaluru, Chennai and Mumbai.</p></div>
+          <div class="stat"><span class="n" data-stat="hours"><i>24</i></span><p class="c">hours modelled in the daily dispatch, from night free cooling to the evening peak.</p></div>
         </div>
       </div>
     </section>
@@ -135,29 +135,33 @@
       <div class="wrap">
         <div class="eyebrow rv">04 &middot; Questions</div>
         <div class="band-head rv">
-          <h2>Straight answers.</h2>
-          <p class="lede">What the tool claims, and what it does not.</p>
+          <h2>Questions, answered.</h2>
+          <p class="lede">Before you open the workbench.</p>
         </div>
         <div class="faq rv">
           <details>
-            <summary>Are these numbers real?<span class="plus" aria-hidden="true"></span></summary>
-            <p class="a">They are modelled. The engine runs on illustrative facility inputs and on regional values that are not yet verified against official files, and every figure is labelled that way. Read results as questions to ask, not findings.</p>
+            <summary>What does it compare?<span class="plus" aria-hidden="true"></span></summary>
+            <p class="a">Three cooling designs for the same site and workload: evaporative towers, air-cooled chillers and hybrid adiabatic coolers. For each one you get energy, PUE, water, carbon and operating cost, and what the design asks of the local water supply and power grid.</p>
           </details>
           <details>
-            <summary>Does AI write the figures?<span class="plus" aria-hidden="true"></span></summary>
-            <p class="a">No. A model can draft prose and read claims out of text, but every number comes from the engine. A separate verifier recomputes the figures and withholds anything that does not match. It checks that numbers are real, not that the wording is fair.</p>
+            <summary>Why two ledgers?<span class="plus" aria-hidden="true"></span></summary>
+            <p class="a">The facility ledger is what the operator spends. The community ledger is what the shared water and power systems absorb: water headroom, groundwater stress and substation peak. The same choice moves both, and seeing them together shows who carries what.</p>
           </details>
           <details>
             <summary>Why is there no single score?<span class="plus" aria-hidden="true"></span></summary>
-            <p class="a">A combined score would hide the trade-off the tool exists to show. Water, power and carbon stay side by side, and when no design meets every limit, the planner says so and names the binding constraint.</p>
+            <p class="a">A combined score would hide the trade-off. Water, power and carbon stay side by side, and when no design meets every limit you set, the planner says so and names the limit that binds.</p>
+          </details>
+          <details>
+            <summary>Can I test a what-if?<span class="plus" aria-hidden="true"></span></summary>
+            <p class="a">Yes. Change the site, season, workload, IT load or grid carbon and every ledger recalculates. Set facility and community limits and the planner returns the designs that meet all of them.</p>
+          </details>
+          <details>
+            <summary>How are the figures checked?<span class="plus" aria-hidden="true"></span></summary>
+            <p class="a">Every number comes from one calculation engine. A separate verifier traces each figure in a brief back to that engine and withholds anything that does not match.</p>
           </details>
           <details>
             <summary>Who is it for?<span class="plus" aria-hidden="true"></span></summary>
-            <p class="a">Operators and developers choosing a cooling design, and the municipalities, utilities and community groups who want a transparent read of the same assessment.</p>
-          </details>
-          <details>
-            <summary>What does it not do?<span class="plus" aria-hidden="true"></span></summary>
-            <p class="a">It does not control equipment, certify a design or claim verified savings. Results are modelled potential impact, and any real facility needs qualified engineering review.</p>
+            <p class="a">Operators and developers choosing a cooling design, and the municipalities, utilities and community groups who want a transparent read of the same assessment. Reviewers can also check an applicant's stated figures against the modelled range.</p>
           </details>
         </div>
       </div>
@@ -177,7 +181,7 @@
   <footer class="foot">
     <div class="wrap mono">
       <span>AquaCarbon DC &middot; AI Builder Cup &middot; Sustainability &amp; Social Impact</span>
-      <span>Modelled potential impact &middot; Illustrative inputs</span>
+      <span>Modelled estimates &middot; Not engineering advice</span>
     </div>
   </footer>
 

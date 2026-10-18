@@ -248,9 +248,18 @@
     $$("canvas[data-viz]").forEach((c) => { const fn = VIZ[c.dataset.viz]; if (fn) loop(c, fn, 1.7); });
   }
 
-  /* ---------- the day: a spectrum field with one selected band ---------- */
-  const BARS = 72;            // three bars per hour across 24 hours
-  const SEL0 = 36, SEL1 = 51; // bar indices 36..50 = hours 12 to 17, the afternoon heat window the dispatch model defers load out of
+  /* ---------- the day: 24 modelled ambient temperatures with one selected band ---------- */
+  // Bengaluru, annual average, 15 MW: ambient_temp_c for each hour from the dispatch model (engine/arbiter.py).
+  // tests/test_ui_contract.py fails if this array drifts from the engine.
+  const TEMPS = [24.5, 24.0, 23.7, 23.5, 23.3, 23.7, 25.0, 27.5, 30.0, 32.0, 33.5, 34.3, 34.5, 34.3, 33.7, 32.5, 31.0, 29.5, 28.0, 26.7, 26.0, 25.5, 25.0, 24.7];
+  const BARS = 72;            // three bars per hour
+  const SEL0 = 36, SEL1 = 51; // bars 36..50 = 12:00 to 17:00, the window the dispatch model defers flexible load out of
+  const T_MIN = Math.min.apply(null, TEMPS), T_MAX = Math.max.apply(null, TEMPS);
+  const tempAt = (h) => {
+    const i = Math.floor(h) % 24, j = (i + 1) % 24, f = h - Math.floor(h);
+    return TEMPS[i] * (1 - f) + TEMPS[j] * f;
+  };
+
   function spectrum() {
     const canvas = $("#spectrum"), readout = $("#readout");
     if (!canvas) return;
@@ -262,7 +271,7 @@
       };
       canvas.addEventListener("pointermove", (e) => {
         const hr = hourAt(e), inside = hr >= 12 && hr < 17;
-        readout.textContent = String(hr).padStart(2, "0") + ":00 · " + (inside ? "deferral window" : "outside the window");
+        readout.textContent = String(hr).padStart(2, "0") + ":00 \u00b7 " + TEMPS[hr].toFixed(1) + "\u00b0C \u00b7 " + (inside ? "deferral window" : "normal dispatch");
       });
       canvas.addEventListener("pointerleave", () => { readout.textContent = DEFAULT; });
     }
@@ -271,27 +280,24 @@
       const padTop = 22 * d, padBottom = (narrow ? 20 : 66) * d, base = h - padBottom, maxH = base - padTop;
       const gap = Math.max(2 * d, (w / BARS) * 0.28);
       const bw = (w - gap * (BARS - 1)) / BARS;
-      ctx.fillStyle = "rgba(255,255,255,.16)";
+      let tallestSelected = 0;
       for (let i = 0; i < BARS; i++) {
-        const hour = (i / BARS) * 24;
-        // a half-sine envelope peaking mid-afternoon, with a quiet floor overnight
-        const env = hour < 6 || hour > 22 ? 0.1 : 0.1 + 0.9 * Math.sin(Math.PI * (hour - 6) / 16);
-        const osc = 1 + 0.12 * Math.sin(i * 0.9 + t * 1.3) + 0.08 * Math.sin(i * 0.37 - t * 0.9);
-        let v = Math.min(1, Math.max(0.04, env * osc));
+        const norm = (tempAt((i / BARS) * 24) - T_MIN) / (T_MAX - T_MIN);
+        const shimmer = 1 + 0.03 * Math.sin(i * 0.9 + t * 1.3);   // a little life; the readout carries the exact values
+        const v = Math.min(1, Math.max(0.05, (0.12 + 0.88 * norm) * shimmer));
         const selected = i >= SEL0 && i < SEL1;
-        // lift the selected bars clear of the envelope so the marker box is visibly full
-        if (selected) v = Math.max(v, 0.76 + 0.1 * Math.sin(i * 0.7 + t * 1.1));
         const bh = v * maxH, x = i * (bw + gap);
+        if (selected) tallestSelected = Math.max(tallestSelected, bh);
         ctx.fillStyle = selected ? "#6366F1" : "rgba(255,255,255,.16)";
         ctx.fillRect(x, base - bh, bw, bh);
       }
-      // hairline baseline
       ctx.fillStyle = "rgba(255,255,255,.18)";
       ctx.fillRect(0, base + 6 * d, w, d);
-      // stroked marker box around exactly the selected run
-      const mx = SEL0 * (bw + gap) - gap / 2, mw = (SEL1 - SEL0) * (bw + gap) - gap / 2 + gap / 2;
+      // stroked marker box around exactly the selected run, sized to its tallest bar
+      const mx = SEL0 * (bw + gap) - gap / 2, mw = (SEL1 - SEL0) * (bw + gap);
+      const top = base - tallestSelected - 10 * d;
       ctx.lineWidth = d; ctx.strokeStyle = "rgba(255,255,255,.7)";
-      ctx.strokeRect(mx + 0.5 * d, padTop - 8 * d, mw, base - padTop + 8 * d + 6 * d);
+      ctx.strokeRect(mx + 0.5 * d, top, mw, base + 6 * d - top);
     }, 1.7);
   }
 

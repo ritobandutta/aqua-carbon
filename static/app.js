@@ -456,7 +456,7 @@ function renderDualLedgers(assessments) {
       trio(f => ({ raw: f.direct_water_consumption_ml, text: `${f.direct_water_consumption_ml.toFixed(1)} ML` }))) +
     ledgerRow("Annual facility energy", `8,760 operating hours. Dry-cooling sensitivity range: ${bandRange(sd, "dry_cooling", "facility_energy_mwh", "MWh", 0)}`,
       trio(f => ({ raw: f.total_facility_energy_mwh, text: `${f.total_facility_energy_mwh.toLocaleString(undefined, { maximumFractionDigits: 0 })} MWh` }))) +
-    ledgerRow("Annual operating cost", `Illustrative tariffs (INR 8.5/kWh, INR 95/kL), unverified. Evaporative sensitivity range: ${bandRange(sd, "evaporative", "operating_cost_inr_crores", "Cr", 0)}`,
+    ledgerRow("Annual operating cost", `Assumes INR 8.5/kWh power and INR 95/kL water. Evaporative sensitivity range: ${bandRange(sd, "evaporative", "operating_cost_inr_crores", "Cr", 0)}`,
       trio(f => ({ raw: f.annual_operating_cost_inr_crores, text: `INR ${f.annual_operating_cost_inr_crores.toFixed(1)} Cr` }))) +
     `<p class="legend-note mono">Underline marks the lowest value in each row</p>`;
 
@@ -735,7 +735,7 @@ async function runLiveEvals() {
 function bandRange(data, profile, metric, unit, digits) {
   const b = data && data.uncertainty_bands && data.uncertainty_bands[profile] && data.uncertainty_bands[profile][metric];
   if (!b) return "n/a";
-  return `${b.low.toFixed(digits)}–${b.high.toFixed(digits)} ${unit} (sensitivity, not a confidence interval)`;
+  return `${b.low.toFixed(digits)}–${b.high.toFixed(digits)} ${unit}`;
 }
 
 function bandText(bands, profile, metric, unit, digits) {

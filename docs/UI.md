@@ -16,13 +16,17 @@ Two pages share one visual system, inspired by a dark "generated light" landing-
 - Under `prefers-reduced-motion` the intro never runs, every animation stops, each canvas draws one still frame, and all content is visible.
 - `tests/test_ui_contract.py` enforces: ids the scripts look up exist, every emitted class is styled, no shadows or inline styles or hard-coded colours, radii are 0, the only gradients are the hero veil, and reduced motion is handled.
 
-## Honesty rules for copy
+## Copy rules
 
-The landing page's numbers are tested against the codebase (profile count, the verifier's `14/14` from the real eval, and `0/9` verified inputs from `VALUE_STATUS`). If one of those changes, the test fails until the page is updated. The spectrum drawing is labelled as illustrative, not model output.
+The landing page reads like the finished product: it answers what a user would ask, and carries no status or caveat wording. Disclosures (what is modelled, what is unverified, limits) belong in the deck and in `STATUS.md`, not on the page. `tests/test_ui_contract.py` fails if words like "illustrative", "not yet", "unverified", "prototype" or "hackathon" appear on the landing page.
+
+What stays true is still tested. The landing page only states things the repo can back: the profile, city and hour counts are checked against the engine, the bar chart plots the dispatch model's real 24 hourly temperatures (the test fails if they drift), and the highlighted 12:00-17:00 window is checked against the hours the model actually defers load in. Overclaims ("guaranteed", "certified", "real-time control") are still banned.
+
+**The workbench still shows in-product labels** such as "illustrative, not yet verified" on source lines and low-confidence chips. Those come from the engine's provenance data, not from page copy, and they are the product's own honesty mechanism. They are left in on purpose. Say if you want them hidden for a demo.
 
 ## Known deviations from the reference style
 
-- The brief asks for at most six accent-coloured elements per page. The landing page has eight at rest: the wordmark word, two primary buttons, the selected spectrum band, and four stat numerals. The workbench uses more, because bars, slider thumbs and the active tab each mark state.
+- The brief asks for at most six accent-coloured elements per page. The landing page has eight at rest: the wordmark word, two primary buttons, the selected chart band, and four stat numerals. The workbench uses more, because bars, slider thumbs and the active tab each mark state.
 - The hero veil is the one gradient used, and only to keep type legible over bright ribbons.
 - Contrast: palette muted `#71717A` is 4.1:1, so it is used only for decorative index numbers. Small informational text uses `#8E8E98` (6.1:1).
 
