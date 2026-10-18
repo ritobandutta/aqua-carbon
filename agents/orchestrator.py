@@ -101,38 +101,74 @@ class AgentOrchestrator:
         dry = assessments.get("dry_cooling")
         hybrid = assessments.get("hybrid_adiabatic")
 
-        q_lower = query.lower()
-
-        # Deterministic grounded explanation templates
-        if "why" in q_lower or "trade-off" in q_lower or "difference" in q_lower or "strain" in q_lower:
-            explanation = (
-                f"### Deterministic Analysis of Cooling Burden Shift\n\n"
-                f"1. **Thermodynamics of Latent vs. Sensible Heat**:\n"
-                f"   - **Evaporative Cooling** rejects heat through water evaporation (~2,260 kJ/kg latent heat of vaporization). "
-                f"     This requires minimal electrical compressor work, achieving a lean PUE of **{evap.facility_ledger.pue:.2f}**, "
-                f"     but directly consumes **{evap.facility_ledger.direct_water_consumption_ml:.1f} ML of water annually** "
-                f"     ({evap.facility_ledger.daily_water_intake_m3:.0f} m³/day).\n"
-                f"   - **Dry Cooling** rejects heat sensibly into the air using fans and mechanical chillers. "
-                f"     Because air has a much lower heat capacity than water (1.005 kJ/kg·K vs 4.184 kJ/kg·K), chillers must work harder, "
-                f"     pushing PUE to **{dry.facility_ledger.pue:.2f}** and increasing annual electrical consumption to "
-                f"     **{dry.facility_ledger.total_facility_energy_mwh:,.0f} MWh** (a **{(dry.facility_ledger.total_facility_energy_mwh - evap.facility_ledger.total_facility_energy_mwh):,.0f} MWh power penalty**).\n\n"
-                f"2. **Community Impact Shift**:\n"
-                f"   - Evaporative cooling consumes **{evap.community_ledger.water_headroom_share_pct.formatted_value}** of local municipal water headroom "
-                f"     in an aquifer designated as *{evap.community_ledger.aquifer_stress_classification.formatted_value}*.\n"
-                f"   - Dry cooling protects water entirely (0.0 ML/yr) but consumes **{dry.community_ledger.substation_peak_demand_share_pct.formatted_value}** "
-                f"     of the local 66/11kV electrical feeder capacity during summer peak hours, heightening residential grid brownout risks.\n\n"
-                f"3. **The Hybrid Solution**:\n"
-                f"   - Hybrid Adiabatic cooling balances both burdens: saving **{(evap.facility_ledger.direct_water_consumption_ml - hybrid.facility_ledger.direct_water_consumption_ml):.1f} ML of water** "
-                f"     while capping PUE at **{hybrid.facility_ledger.pue:.2f}**."
-            )
+        # Check for live Gemini API
+        api_key = os.getenv("GEMINI_API_KEY", "")
+        if api_key:
+            try:
+                from google import genai
+                client = genai.Client(api_key=api_key)
+                prompt = (
+                    f"You are the AquaCarbon DC Investigator Agent powered by Gemini.\n"
+                    f"The user asked: '{query}'\n\n"
+                    f"GROUND TRUTH DETERMINISTIC METRICS:\n"
+                    f"- IT Capacity: {scenario.it_capacity_mw:.1f} MW in {scenario.region.title()} ({scenario.season.value})\n"
+                    f"- Evaporative: PUE={evap.facility_ledger.pue:.2f}, WUE={evap.facility_ledger.wue:.2f} L/kWh, "
+                    f"Water={evap.facility_ledger.direct_water_consumption_ml:.1f} ML/yr, "
+                    f"OpEx=INR {evap.facility_ledger.annual_operating_cost_inr_crores:.2f} Cr, "
+                    f"Water Headroom Depletion={evap.community_ledger.water_headroom_share_pct.formatted_value}\n"
+                    f"- Dry Air-Cooling: PUE={dry.facility_ledger.pue:.2f}, WUE={dry.facility_ledger.wue:.2f} L/kWh, "
+                    f"Water={dry.facility_ledger.direct_water_consumption_ml:.1f} ML/yr, "
+                    f"OpEx=INR {dry.facility_ledger.annual_operating_cost_inr_crores:.2f} Cr, "
+                    f"Substation Peak Load={dry.community_ledger.substation_peak_demand_share_pct.formatted_value}\n"
+                    f"- Hybrid Adiabatic: PUE={hybrid.facility_ledger.pue:.2f}, WUE={hybrid.facility_ledger.wue:.2f} L/kWh, "
+                    f"Water={hybrid.facility_ledger.direct_water_consumption_ml:.1f} ML/yr, "
+                    f"OpEx=INR {hybrid.facility_ledger.annual_operating_cost_inr_crores:.2f} Cr\n\n"
+                    f"TASK: Provide a professional, deep-dive thermodynamic, economic, and community water impact explanation.\n"
+                    f"STRICT INSTRUCTION: Ground your answer strictly in the exact numbers above. Do not invent contradictory statistics."
+                )
+                response = client.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents=prompt
+                )
+                if response and response.text:
+                    explanation = response.text.strip()
+            except Exception as e:
+                print(f"[Notice] Live Gemini API call fallback ({e}); using deterministic templates.")
+                explanation = None
         else:
-            explanation = (
-                f"Based on the engine calculations for {scenario.region} at {scenario.it_capacity_mw:.1f} MW capacity:\n"
-                f"- Evaporative: PUE {evap.facility_ledger.pue:.2f}, Water {evap.facility_ledger.direct_water_consumption_ml:.1f} ML, OpEx ₹{evap.facility_ledger.annual_operating_cost_inr_crores:.2f} Cr.\n"
-                f"- Dry Cooling: PUE {dry.facility_ledger.pue:.2f}, Water {dry.facility_ledger.direct_water_consumption_ml:.1f} ML, OpEx ₹{dry.facility_ledger.annual_operating_cost_inr_crores:.2f} Cr.\n"
-                f"- Hybrid: PUE {hybrid.facility_ledger.pue:.2f}, Water {hybrid.facility_ledger.direct_water_consumption_ml:.1f} ML, OpEx ₹{hybrid.facility_ledger.annual_operating_cost_inr_crores:.2f} Cr.\n"
-                f"All metrics are verified against regional water stress and grid carbon standards."
-            )
+            explanation = None
+
+        if not explanation:
+            # Deterministic grounded explanation templates
+            if "why" in q_lower or "trade-off" in q_lower or "difference" in q_lower or "strain" in q_lower:
+                explanation = (
+                    f"### Deterministic Analysis of Cooling Burden Shift\n\n"
+                    f"1. **Thermodynamics of Latent vs. Sensible Heat**:\n"
+                    f"   - **Evaporative Cooling** rejects heat through water evaporation (~2,260 kJ/kg latent heat of vaporization). "
+                    f"     This requires minimal electrical compressor work, achieving a lean PUE of **{evap.facility_ledger.pue:.2f}**, "
+                    f"     but directly consumes **{evap.facility_ledger.direct_water_consumption_ml:.1f} ML of water annually** "
+                    f"     ({evap.facility_ledger.daily_water_intake_m3:.0f} m³/day).\n"
+                    f"   - **Dry Cooling** rejects heat sensibly into the air using fans and mechanical chillers. "
+                    f"     Because air has a much lower heat capacity than water (1.005 kJ/kg·K vs 4.184 kJ/kg·K), chillers must work harder, "
+                    f"     pushing PUE to **{dry.facility_ledger.pue:.2f}** and increasing annual electrical consumption to "
+                    f"     **{dry.facility_ledger.total_facility_energy_mwh:,.0f} MWh** (a **{(dry.facility_ledger.total_facility_energy_mwh - evap.facility_ledger.total_facility_energy_mwh):,.0f} MWh power penalty**).\n\n"
+                    f"2. **Community Impact Shift**:\n"
+                    f"   - Evaporative cooling consumes **{evap.community_ledger.water_headroom_share_pct.formatted_value}** of local municipal water headroom "
+                    f"     in an aquifer designated as *{evap.community_ledger.aquifer_stress_classification.formatted_value}*.\n"
+                    f"   - Dry cooling protects water entirely (0.0 ML/yr) but consumes **{dry.community_ledger.substation_peak_demand_share_pct.formatted_value}** "
+                    f"     of the local 66/11kV electrical feeder capacity during summer peak hours, heightening residential grid brownout risks.\n\n"
+                    f"3. **The Hybrid Solution**:\n"
+                    f"   - Hybrid Adiabatic cooling balances both burdens: saving **{(evap.facility_ledger.direct_water_consumption_ml - hybrid.facility_ledger.direct_water_consumption_ml):.1f} ML of water** "
+                    f"     while capping PUE at **{hybrid.facility_ledger.pue:.2f}**."
+                )
+            else:
+                explanation = (
+                    f"Based on the engine calculations for {scenario.region} at {scenario.it_capacity_mw:.1f} MW capacity:\n"
+                    f"- Evaporative: PUE {evap.facility_ledger.pue:.2f}, Water {evap.facility_ledger.direct_water_consumption_ml:.1f} ML, OpEx INR {evap.facility_ledger.annual_operating_cost_inr_crores:.2f} Cr.\n"
+                    f"- Dry Cooling: PUE {dry.facility_ledger.pue:.2f}, Water {dry.facility_ledger.direct_water_consumption_ml:.1f} ML, OpEx INR {dry.facility_ledger.annual_operating_cost_inr_crores:.2f} Cr.\n"
+                    f"- Hybrid: PUE {hybrid.facility_ledger.pue:.2f}, Water {hybrid.facility_ledger.direct_water_consumption_ml:.1f} ML, OpEx INR {hybrid.facility_ledger.annual_operating_cost_inr_crores:.2f} Cr.\n"
+                    f"All metrics are verified against regional water stress and grid carbon standards."
+                )
 
         # Independent verifier check on the query response
         sig = f"QUERY_VERIFIED_SHA256:{hash(explanation) & 0xFFFFFFFF:08x}"
