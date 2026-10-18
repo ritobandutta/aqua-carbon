@@ -9,6 +9,11 @@ Implements the 5 evaluation checks required by Section 8 of the Specification:
 """
 
 import sys
+from pathlib import Path
+ROOT_DIR = Path(__file__).resolve().parent.parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
 import copy
 from typing import Dict, Any, List
 from engine.models import (
