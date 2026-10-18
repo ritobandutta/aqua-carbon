@@ -127,9 +127,44 @@ function initEventListeners() {
   // Recalculate Button
   const btnRecalc = document.getElementById("btn-recalculate");
   if (btnRecalc) {
-    btnRecalc.addEventListener("click", () => {
-      loadScenario();
-      loadCoverageCheck();
+    btnRecalc.addEventListener("click", async () => {
+      // 1. Switch directly to Dual-Ledger Explorer tab so user immediately sees the updated cards!
+      const dashTabBtn = document.querySelector('.nav-tab[data-tab="dashboard"]');
+      if (dashTabBtn && !dashTabBtn.classList.contains("active")) {
+        dashTabBtn.click();
+      }
+
+      // 2. Button visual feedback
+      const origHtml = btnRecalc.innerHTML;
+      btnRecalc.innerHTML = `<span class="spinner-sm"></span> Calculating...`;
+      btnRecalc.disabled = true;
+
+      try {
+        await Promise.all([loadScenario(), loadCoverageCheck()]);
+        
+        // 3. Highlight cards with animation pulse
+        document.querySelectorAll(".ledger-metric-card, .burden-col-card").forEach(el => {
+          el.classList.add("updated-pulse");
+          setTimeout(() => el.classList.remove("updated-pulse"), 800);
+        });
+
+        // 4. Success badge on button
+        btnRecalc.innerHTML = `✓ Ledgers Updated!`;
+        btnRecalc.style.background = "linear-gradient(135deg, #10b981, #059669)";
+
+        setTimeout(() => {
+          btnRecalc.innerHTML = origHtml;
+          btnRecalc.style.background = "";
+          btnRecalc.disabled = false;
+        }, 1200);
+      } catch (err) {
+        console.error("Recalculation error:", err);
+        btnRecalc.innerHTML = `Error Recalculating`;
+        setTimeout(() => {
+          btnRecalc.innerHTML = origHtml;
+          btnRecalc.disabled = false;
+        }, 2000);
+      }
     });
   }
 
