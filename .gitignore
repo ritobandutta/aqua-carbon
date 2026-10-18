@@ -1,0 +1,54 @@
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Secrets and local config
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+service-account*.json
+credentials*.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.pyright/
+.hypothesis/
+.coverage
+htmlcov/
+*.egg-info/
+dist/
+build/
+
+# Node / web
+node_modules/
+.next/
+out/
+.turbo/
+*.tsbuildinfo
+next-env.d.ts
+
+# Local stores and caches
+*.duckdb
+*.duckdb.wal
+data/cache/
+data/raw/
+.cache/
+
+# Eval and run outputs (reports under docs/ are committed deliberately)
+evals/runs/
+*.log
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Terraform / deploy scratch
+.terraform/
+*.tfstate*
