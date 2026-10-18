@@ -1,0 +1,26 @@
+# Image for the permit-review use case (ADK + MCP + A2A). Needs Python >= 3.11, so it is separate from the
+# base Dockerfile. One image, three roles, chosen by the SERVICE env var:
+#   SERVICE=api   (default)  main app incl. /api/review
+#   SERVICE=mcp              MCP server (engine tools)
+#   SERVICE=a2a              A2A verifier
+FROM python:3.12-slim
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PORT=8080 SERVICE=api PYTHONPATH=/app
+WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+COPY requirements.txt requirements-agents.txt /app/
+RUN pip install --no-cache-dir -r requirements-agents.txt
+COPY engine/ /app/engine/
+COPY agents/ /app/agents/
+COPY evals/ /app/evals/
+COPY api/ /app/api/
+COPY static/ /app/static/
+COPY review/ /app/review/
+COPY mcp_server/ /app/mcp_server/
+COPY a2a_verifier/ /app/a2a_verifier/
+COPY data/ /app/data/
+COPY SPEC.md /app/
+EXPOSE 8080
+CMD ["sh", "-c", "case \"$SERVICE\" in \
+  mcp) MCP_HOST=0.0.0.0 MCP_PORT=$PORT exec python -m mcp_server.server ;; \
+  a2a) exec uvicorn a2a_verifier.app:app --host 0.0.0.0 --port $PORT ;; \
+  *)   exec uvicorn api.main:app --host 0.0.0.0 --port $PORT ;; esac"]

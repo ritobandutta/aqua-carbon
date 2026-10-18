@@ -69,6 +69,15 @@ function initEventListeners() {
     });
   });
 
+  // Permit claim review
+  const btnRevS = document.getElementById("btn-run-review-structured");
+  if (btnRevS) btnRevS.addEventListener("click", () => runReview("structured"));
+  const btnRevT = document.getElementById("btn-run-review-text");
+  if (btnRevT) btnRevT.addEventListener("click", () => runReview("text"));
+  document.querySelectorAll("[data-review]").forEach(chip => chip.addEventListener("click", () => {
+    document.getElementById("review-text").value = chip.dataset.review;
+  }));
+
   // Presets Selector
   const presetSelector = document.getElementById("preset-selector");
   if (presetSelector) {
@@ -808,6 +817,41 @@ function provenanceLine(data) {
   const ver = data.verifier_mode ? ` | Verifier: ${data.verifier_mode}` : "";
   const run = data.run_id ? ` | Run ${data.run_id}` : "";
   return escapeHtml(src + ver + run);
+}
+
+async function runReview(mode) {
+  const out = document.getElementById("review-output");
+  if (!out) return;
+  const text = document.getElementById("review-text").value.trim();
+  const scenario = { region: state.currentRegion, it_capacity_mw: state.itCapacityMw, season: state.currentSeason, workload_type: state.workloadType || "static_inference" };
+  const body = { scenario };
+  if (mode === "structured") {
+    const v = parseFloat(document.getElementById("review-value").value);
+    if (!Number.isFinite(v)) { out.innerHTML = `<div style="color:#f43f5e;">Enter a numeric value first.</div>`; return; }
+    body.claims = [{ cooling_type: document.getElementById("review-cooling").value, metric: document.getElementById("review-metric").value, claimed_value: v }];
+    body.applicant_text = text;
+  } else {
+    if (!text) { out.innerHTML = `<div style="color:#f43f5e;">Paste some application text first.</div>`; return; }
+    body.applicant_text = text;
+  }
+  out.innerHTML = `<div class="loading-spinner">Checking against the engine and sending the review to the independent verifier...</div>`;
+  try {
+    const res = await fetch("/api/review", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const data = await res.json();
+    if (!res.ok) { out.innerHTML = `<div style="color:#f43f5e;">${escapeHtml(data.detail || "Review failed")}</div>`; return; }
+    const prov = data.provenance || {};
+    const line = `Mode: ${data.mode} | MCP: ${prov.mcp} | Verification: ${prov.verification} (${data.verification ? data.verification.signature : "n/a"})`;
+    const badge = data.status === "verified" ? "success" : "";
+    out.innerHTML = `
+      <div style="display:flex; justify-content:space-between; gap:1rem; margin-bottom:0.8rem; flex-wrap:wrap;">
+        <span class="verifier-badge ${badge}">${escapeHtml(data.status.replace(/_/g, " ").toUpperCase())}</span>
+        <span style="font-size:0.72rem; color:#94a3b8; font-family:var(--font-mono);">${escapeHtml(line)}</span>
+      </div>
+      <div>${simpleMarkdownToHtml(data.review_markdown || "")}</div>
+      <p style="font-size:0.78rem; color:#94a3b8; margin-top:0.8rem;">${escapeHtml(data.notice || "")}</p>`;
+  } catch (err) {
+    out.innerHTML = `<div style="color:#f43f5e;">Review failed: ${escapeHtml(err.message)}</div>`;
+  }
 }
 
 function escapeHtml(s) {

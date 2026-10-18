@@ -66,6 +66,16 @@ Limitations 3 and 4 above are resolved. Limitation 2 remains open and is now doc
 
 Still not done: official-source verification of every regional number (needs a person with access), live Gemini and Vertex tests (need a key or project), hourly simulation, real ADK/MCP/A2A protocols, Gemma, Kannada/Hindi brief.
 
+## Update 2026-10-18 (latest): second use case, Permit Claim Review (ADK + MCP + A2A)
+
+Design and caveats are in [`AGENTIC_REVIEW.md`](AGENTIC_REVIEW.md). In short:
+- **MCP** (`mcp_server/`): the engine as typed tools. **ADK** (`review/service.py`): a claim extractor and a reviewer agent that calls those tools. **A2A** (`a2a_verifier/`): an independent verifier process that recomputes the numbers and fails closed.
+- The model never produces a number. Tests cover an invented claim, tampered tool arguments, and a model that skips the tool; each is blocked. A test also checks that the verifier process loads no reviewer-side code and holds no model client.
+- `agents/__init__.py` is now lazy. Before this, importing the verifier also loaded the advisor, orchestrator and planner, which defeated the independence claim.
+- Needs Python 3.11 or newer for ADK (`requirements-agents.txt`, `Dockerfile.review`). The base app is unchanged and `/api/review` returns 503 without the extras.
+- ADK's A2A support is marked experimental by Google.
+- **Not verified:** real Gemini on the agentic path (scripted stand-in only), the UI tab in a browser, GCP deployment, and the rebuilt three-container run after the MCP host-header fix (the rerun was blocked by an automated safety check in this session).
+
 ## Plan status
 
 | Plan phase | State |

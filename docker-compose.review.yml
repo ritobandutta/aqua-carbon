@@ -1,0 +1,20 @@
+# Local three-service run of the permit-review use case. Usage: docker compose -f docker-compose.review.yml up --build
+# The A2A agent card advertises A2A_PUBLIC_*; clients reject a card whose address differs from where they fetched it,
+# so it is set to the service name the API uses on the compose network.
+services:
+  mcp:
+    build: { context: ., dockerfile: Dockerfile.review }
+    environment: { SERVICE: mcp, PORT: "8200", MCP_ALLOWED_HOSTS: "mcp:*" }
+  a2a:
+    build: { context: ., dockerfile: Dockerfile.review }
+    environment: { SERVICE: a2a, PORT: "8300", A2A_PUBLIC_HOST: a2a, A2A_PUBLIC_PORT: "8300" }
+  api:
+    build: { context: ., dockerfile: Dockerfile.review }
+    ports: ["8000:8000"]
+    environment:
+      SERVICE: api
+      PORT: "8000"
+      MCP_URL: http://mcp:8200
+      A2A_VERIFIER_URL: http://a2a:8300
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    depends_on: [mcp, a2a]

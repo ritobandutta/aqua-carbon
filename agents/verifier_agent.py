@@ -21,7 +21,7 @@ import json
 import re
 from datetime import datetime, timezone
 from itertools import combinations
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 from engine.models import ProfileAssessment, VerificationReport, VerificationCheckItem
 
 _NUM = r'(?<![0-9.])([0-9]+(?:\.[0-9]+)?)'
@@ -132,8 +132,15 @@ class VerifierAgent:
     give an identical signature.
     """
 
-    def _claim_checks(self, text: str, assessments: Dict[str, ProfileAssessment]) -> List[VerificationCheckItem]:
-        allowed = _allowed_values(assessments)
+    def _claim_checks(
+        self,
+        text: str,
+        assessments: Dict[str, ProfileAssessment],
+        extra_allowed: Optional[Dict[str, List[float]]] = None,
+    ) -> List[VerificationCheckItem]:
+        allowed = {k: list(v) for k, v in _allowed_values(assessments).items()}
+        for label, values in (extra_allowed or {}).items():
+            allowed.setdefault(label, []).extend(values)
         checks: List[VerificationCheckItem] = []
         for label, num in extract_claims(text):
             candidates = allowed.get(label, [])
@@ -148,9 +155,16 @@ class VerifierAgent:
             ))
         return checks
 
-    def verify_text(self, text: str, assessments: Dict[str, ProfileAssessment]) -> VerificationReport:
-        """Claims-only check for free-form text such as an investigator answer."""
-        return _build_report(self._claim_checks(text, assessments))
+    def verify_text(
+        self,
+        text: str,
+        assessments: Dict[str, ProfileAssessment],
+        extra_allowed: Optional[Dict[str, List[float]]] = None,
+    ) -> VerificationReport:
+        """Claims-only check for free-form text such as an investigator answer.
+        extra_allowed adds values (by claim label) that the caller has independently justified,
+        for example an applicant's own figures or modelled-range bounds."""
+        return _build_report(self._claim_checks(text, assessments, extra_allowed))
 
     def verify_briefs(
         self,

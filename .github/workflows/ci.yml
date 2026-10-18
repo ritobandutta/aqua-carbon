@@ -12,7 +12,7 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-      - run: pip install -r requirements.txt
+      - run: pip install -r requirements-agents.txt
       # No GEMINI_API_KEY in CI: tests cover the deterministic path and mock the model.
       - run: python -m pytest -q
       - run: python -m evals.run_evals

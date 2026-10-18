@@ -339,6 +339,7 @@ When evaluating the **Agentic Investigator** tab in the live application, test t
 | [`docs/DATA_SOURCES.md`](docs/DATA_SOURCES.md) | Dataset audit tracker |
 | [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | GCP deployment guide |
 | [`docs/GLOSSARY.md`](docs/GLOSSARY.md) | Terms |
+| [`docs/AGENTIC_REVIEW.md`](docs/AGENTIC_REVIEW.md) | Permit Claim Review: the ADK + MCP + A2A use case |
 | [`docs/product/`](docs/product/) | Original v1 PDF and v2 docx |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | Workflow and definition of done |
 | [`AGENTS.md`](AGENTS.md) | Context for AI coding assistants |
