@@ -35,8 +35,9 @@ def test_min_data_confidence_is_enforced():
     r = run_constraint_planner(S, PlannerConstraints(min_data_confidence=DataConfidence.HIGH))
     assert r.feasible_configurations == []
     assert "data confidence" in r.refusal_reason
-    ok = run_constraint_planner(S, PlannerConstraints(min_data_confidence=DataConfidence.MEDIUM))
-    assert len(ok.feasible_configurations) == 3
+    # Unverified values are LOW, so even a MEDIUM requirement is refused until the audit lands.
+    assert run_constraint_planner(S, PlannerConstraints(min_data_confidence=DataConfidence.MEDIUM)).feasible_configurations == []
+    assert len(run_constraint_planner(S, PlannerConstraints(min_data_confidence=DataConfidence.LOW)).feasible_configurations) == 3
 
 
 def test_no_constraints_means_everything_is_feasible():

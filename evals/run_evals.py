@@ -1,6 +1,6 @@
 """
 Evaluation Suite for AquaCarbon DC — Commons Edition (v2).
-Implements the 5 evaluation checks required by Section 8 of the Specification:
+Implements the evaluation checks required by Section 8 (plus stability, seeded-gap, flip and latency) of the Specification:
 1. Numerical Fidelity Check: Checks that all numbers in briefs match engine calculation.
 2. Verifier Catch-Rate Check: Injects corrupted numbers into briefs and measures verifier detection rate.
 3. Constraint Handling Check: Evaluates feasible configuration search and honest refusal when overconstrained.
@@ -15,12 +15,14 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 import copy
+import json
+import time
 from typing import Dict, Any, List
 from engine.models import (
     ScenarioInput, CoolingType, Season, PlannerConstraints, ProfileAssessment
 )
 from engine.calculator import evaluate_scenario, run_constraint_planner
-from engine.coverage import run_coverage_check
+from engine.coverage import run_coverage_check, AREA_COVERAGE_BENCHMARKS
 from agents.advisor_agent import AdvisorAgent
 from agents.verifier_agent import VerifierAgent
 
@@ -177,13 +179,77 @@ def eval_recommendation_stability() -> Dict[str, Any]:
     }
 
 
+def eval_repeat_run_stability() -> Dict[str, Any]:
+    """Same inputs must give byte-identical engine output and an identical verifier digest."""
+    scenario = ScenarioInput(it_capacity_mw=15.0, region="bengaluru")
+    dumps, digests = set(), set()
+    for _ in range(5):
+        a = evaluate_scenario(scenario)
+        dumps.add(json.dumps({k: v.model_dump(mode="json") for k, v in a.items()}, sort_keys=True))
+        adv = AdvisorAgent()
+        rep = VerifierAgent().verify_briefs(adv.generate_operator_brief(scenario, a), adv.generate_community_brief(scenario, a), a)
+        digests.add(rep.signature)
+    ok = len(dumps) == 1 and len(digests) == 1
+    return {"check": "Repeat-Run Stability", "runs": 5, "distinct_outputs": len(dumps),
+            "distinct_digests": len(digests), "success": ok}
+
+
+def eval_coverage_seeded_gap() -> Dict[str, Any]:
+    """Seed a known gap by shrinking the official footprint in a copy of the data, and a no-gap control.
+    The check must flag the seeded gap and must not flag the control. Needs no real ground truth."""
+    key = "bengaluru"
+    original = copy.deepcopy(AREA_COVERAGE_BENCHMARKS[key])
+    try:
+        AREA_COVERAGE_BENCHMARKS[key]["official_piped_water_coverage_km2"] = AREA_COVERAGE_BENCHMARKS[key]["satellite_settlement_builtup_km2"]
+        control = run_coverage_check(key)
+        AREA_COVERAGE_BENCHMARKS[key]["official_piped_water_coverage_km2"] = AREA_COVERAGE_BENCHMARKS[key]["satellite_settlement_builtup_km2"] * 0.4
+        seeded = run_coverage_check(key)
+    finally:
+        AREA_COVERAGE_BENCHMARKS[key] = original
+    control_clean = control.disparity_ratio <= 1.25 and control.unmapped_tanker_dependent_population_estimate == 0
+    seeded_flagged = seeded.disparity_ratio > 1.25 and seeded.unmapped_tanker_dependent_population_estimate > 0
+    return {"check": "Coverage Seeded-Gap Detection", "control_disparity": control.disparity_ratio,
+            "seeded_disparity": seeded.disparity_ratio, "control_clean": control_clean,
+            "seeded_flagged": seeded_flagged, "success": control_clean and seeded_flagged}
+
+
+def eval_recommendation_flip() -> Dict[str, Any]:
+    """With one fixed community water limit, the feasible set must change when the season changes,
+    and the planner must say which profiles flipped. Fails if the recommendation never moves."""
+    c = PlannerConstraints(max_water_headroom_share_pct=100.0)
+    sets = {}
+    for season in (Season.WINTER, Season.DRY_SUMMER):
+        r = run_constraint_planner(ScenarioInput(it_capacity_mw=15.0, region="bengaluru", season=season), c)
+        sets[season.value] = sorted(a.cooling_type.value for a in r.feasible_configurations)
+    flipped = sets["winter"] != sets["dry_summer"]
+    return {"check": "Recommendation Flip With Season", "winter_feasible": sets["winter"],
+            "dry_summer_feasible": sets["dry_summer"], "flipped": flipped, "success": flipped}
+
+
+def eval_latency() -> Dict[str, Any]:
+    """Own footprint: wall time of one full deterministic analysis (no LLM call)."""
+    from agents.orchestrator import AgentOrchestrator
+    orch = AgentOrchestrator()
+    scenario = ScenarioInput(it_capacity_mw=15.0, region="bengaluru")
+    t = []
+    for _ in range(10):
+        t0 = time.perf_counter(); orch.process_scenario(scenario); t.append((time.perf_counter() - t0) * 1000)
+    t.sort()
+    return {"check": "Deterministic Pipeline Latency", "median_ms": round(t[len(t)//2], 2),
+            "p95_ms": round(t[int(len(t)*0.95) - 1], 2), "llm_tokens": 0, "success": t[len(t)//2] < 500}
+
+
 def run_all_evaluations() -> Dict[str, Any]:
     results = [
         eval_numerical_fidelity(),
         eval_verifier_catch_rate(),
         eval_constraint_handling(),
         eval_coverage_check(),
-        eval_recommendation_stability()
+        eval_recommendation_stability(),
+        eval_repeat_run_stability(),
+        eval_coverage_seeded_gap(),
+        eval_recommendation_flip(),
+        eval_latency()
     ]
 
     all_passed = all(r["success"] for r in results)

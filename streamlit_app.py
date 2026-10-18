@@ -1,150 +1,66 @@
 """
-AquaCarbon DC: Streamlit Web UI on Google Cloud Run
-Interactive Burden-Shifting Gauges & Dual Ledger Visualizer
-Grounded in Karimi et al. (2022) & WRI Aqueduct baselines.
+AquaCarbon DC: optional Streamlit view of the same engine the API uses.
+Run with: streamlit run streamlit_app.py
+All numbers come from engine.calculator, the single calculation engine.
 """
 
-import streamlit as st
 import pandas as pd
-from engine.core import AquaCarbonEngine, CoreScenarioInput
+import streamlit as st
 
-st.set_page_config(
-    page_title="AquaCarbon DC — Commons Edition",
-    page_icon="💧",
-    layout="wide"
-)
+from engine.calculator import evaluate_scenario
+from engine.data_sources import REGIONAL_PROFILES
+from engine.models import ScenarioInput, Season, WorkloadType
 
-st.title("AquaCarbon DC — Commons Edition (v2)")
-st.caption("AI Builder Cup — Sustainability & Social Impact Track | Dual-Ledger Cooling Impact")
+st.set_page_config(page_title="AquaCarbon DC", page_icon="💧", layout="wide")
+st.title("AquaCarbon DC — Commons Edition")
+st.caption("Modelled potential impact with illustrative facility inputs. Not measured savings.")
 
-# Sidebar Controls
-st.sidebar.header("Scenario Configuration")
-it_load = st.sidebar.slider("AI Cluster IT Workload (MW)", min_value=5.0, max_value=60.0, value=10.0, step=2.5)
-ambient_temp = st.sidebar.slider("Summer Ambient Dry-Bulb (°C)", min_value=20.0, max_value=45.0, value=34.0, step=1.0)
-grid_carbon = st.sidebar.slider("Grid Carbon (kg CO2/kWh)", min_value=0.30, max_value=0.90, value=0.72, step=0.02)
+st.sidebar.header("Scenario")
+region = st.sidebar.selectbox("Region", sorted(REGIONAL_PROFILES), format_func=str.title)
+season = st.sidebar.selectbox("Season", [s.value for s in Season], format_func=lambda v: v.replace("_", " ").title())
+workload = st.sidebar.selectbox("Workload", [w.value for w in WorkloadType], format_func=lambda v: v.replace("_", " ").title())
+it_load = st.sidebar.slider("IT capacity (MW)", 5.0, 60.0, 15.0, 2.5)
+grid = st.sidebar.slider("Grid carbon (kg CO2/MWh)", 300.0, 900.0, 710.0, 10.0)
 
-scenario = CoreScenarioInput(
-    it_load_mw=it_load,
-    ambient_temp_c=ambient_temp,
-    grid_emission_factor=grid_carbon
-)
+assessments = evaluate_scenario(ScenarioInput(
+    region=region, season=Season(season), workload_type=WorkloadType(workload),
+    it_capacity_mw=it_load, grid_carbon_factor_kg_per_mwh=grid,
+))
 
-engine = AquaCarbonEngine(scenario)
-results_evap = engine.calculate_profile("evaporative")
-results_dry = engine.calculate_profile("dry")
-results_hybrid = engine.calculate_profile("hybrid")
+st.subheader("Burden-shifting view (no combined score)")
+st.dataframe(pd.DataFrame([
+    {
+        "Profile": a.cooling_name,
+        "Water burden (0-100)": a.burden_scores.water_system_burden,
+        "Power burden (0-100)": a.burden_scores.power_system_burden,
+        "Carbon burden (0-100)": a.burden_scores.carbon_atmosphere_burden,
+    }
+    for a in assessments.values()
+]).set_index("Profile"))
 
-# Section 1: Burden Shifting Matrix
-st.subheader("1. Burden-Shifting Matrix: Where does the impact go?")
-st.markdown(
-    "Every cooling choice moves a burden somewhere: onto the **local water basin**, onto the **local power grid**, "
-    "or into the **atmosphere**. There is no single collapsed ESG score."
-)
+st.subheader("Facility ledger")
+st.dataframe(pd.DataFrame([
+    {
+        "Profile": a.cooling_name,
+        "PUE": a.facility_ledger.pue,
+        "WUE (L/kWh)": a.facility_ledger.wue,
+        "Energy (MWh/yr)": a.facility_ledger.total_facility_energy_mwh,
+        "Direct water (ML/yr)": a.facility_ledger.direct_water_consumption_ml,
+        "Scope 2 (tCO2e/yr)": a.facility_ledger.scope2_carbon_tonnes,
+        "OpEx (INR Cr/yr)": a.facility_ledger.annual_operating_cost_inr_crores,
+    }
+    for a in assessments.values()
+]).set_index("Profile"))
 
-col1, col2, col3 = st.columns(3)
-with col1:
-    st.metric(
-        "Evaporative Water Draw",
-        f"{results_evap['facility_ledger']['daily_water_kl']:,.1f} kL/day",
-        f"{results_evap['community_ledger']['household_water_equivalent_days']:,} households/day"
-    )
-with col2:
-    st.metric(
-        "Dry Cooling Summer PUE",
-        f"{results_dry['facility_ledger']['pue']:.3f}",
-        f"+{results_dry['community_ledger']['peak_grid_demand_mw'] - results_evap['community_ledger']['peak_grid_demand_mw']:.2f} MW Peak Grid Penalty",
-        delta_color="inverse"
-    )
-with col3:
-    st.metric(
-        "Hybrid Adiabatic Balance",
-        f"{results_hybrid['facility_ledger']['daily_water_kl']:,.1f} kL/day",
-        f"-65% water vs wet cooling"
-    )
-
-df = pd.DataFrame({
-    "Cooling Strategy": ["Evaporative (Wet)", "Air-Cooled (Dry)", "Hybrid Adiabatic"],
-    "Water Burden (kL/day)": [
-        results_evap["facility_ledger"]["daily_water_kl"], 
-        results_dry["facility_ledger"]["daily_water_kl"],
-        results_hybrid["facility_ledger"]["daily_water_kl"]
-    ],
-    "Grid Burden (Peak MW)": [
-        results_evap["community_ledger"]["peak_grid_demand_mw"], 
-        results_dry["community_ledger"]["peak_grid_demand_mw"],
-        results_hybrid["community_ledger"]["peak_grid_demand_mw"]
-    ],
-    "Atmospheric Carbon (tCO2/day)": [
-        results_evap["facility_ledger"]["daily_carbon_tonnes"], 
-        results_dry["facility_ledger"]["daily_carbon_tonnes"],
-        results_hybrid["facility_ledger"]["daily_carbon_tonnes"]
-    ]
-})
-
-st.bar_chart(df.set_index("Cooling Strategy"))
-st.info(
-    f"Notice the inverse relationship: Saving {results_evap['facility_ledger']['daily_water_kl'] - results_dry['facility_ledger']['daily_water_kl']:,.0f} kL/day "
-    f"with Dry Cooling shifts {results_dry['community_ledger']['peak_grid_demand_mw'] - results_evap['community_ledger']['peak_grid_demand_mw']:.2f} MW "
-    f"of additional peak electrical demand onto the local BESCOM substation during peak summer conditions."
-)
-
-# Section 2: Side-by-Side Dual Ledgers
-st.subheader("2. Side-by-Side Dual Ledgers")
-tab_fac, tab_comm = st.tabs(["Facility Ledger (Operator)", "Community Ledger (Host Commons)"])
-
-with tab_fac:
-    fac_df = pd.DataFrame([
-        {
-            "Strategy": "Evaporative Cooling",
-            "PUE": results_evap["facility_ledger"]["pue"],
-            "WUE (L/kWh)": results_evap["facility_ledger"]["wue"],
-            "Daily Energy (MWh)": results_evap["facility_ledger"]["daily_energy_mwh"],
-            "Daily Water (kL)": results_evap["facility_ledger"]["daily_water_kl"],
-            "Daily OpEx (₹)": f"₹{results_evap['facility_ledger']['daily_opex_inr']:,.2f}"
-        },
-        {
-            "Strategy": "Dry Air-Cooling",
-            "PUE": results_dry["facility_ledger"]["pue"],
-            "WUE (L/kWh)": results_dry["facility_ledger"]["wue"],
-            "Daily Energy (MWh)": results_dry["facility_ledger"]["daily_energy_mwh"],
-            "Daily Water (kL)": results_dry["facility_ledger"]["daily_water_kl"],
-            "Daily OpEx (₹)": f"₹{results_dry['facility_ledger']['daily_opex_inr']:,.2f}"
-        },
-        {
-            "Strategy": "Hybrid Adiabatic",
-            "PUE": results_hybrid["facility_ledger"]["pue"],
-            "WUE (L/kWh)": results_hybrid["facility_ledger"]["wue"],
-            "Daily Energy (MWh)": results_hybrid["facility_ledger"]["daily_energy_mwh"],
-            "Daily Water (kL)": results_hybrid["facility_ledger"]["daily_water_kl"],
-            "Daily OpEx (₹)": f"₹{results_hybrid['facility_ledger']['daily_opex_inr']:,.2f}"
-        }
-    ])
-    st.table(fac_df.set_index("Strategy"))
-
-with tab_comm:
-    comm_df = pd.DataFrame([
-        {
-            "Strategy": "Evaporative Cooling",
-            "Household Water Equivalent": f"{results_evap['community_ledger']['household_water_equivalent_days']:,} families/day",
-            "Peak Grid Demand (MW)": f"{results_evap['community_ledger']['peak_grid_demand_mw']} MW",
-            "Aquifer Stress Zone": results_evap["community_ledger"]["water_stress_zone"],
-            "Grid Strain Risk": results_evap["community_ledger"]["grid_strain_risk"]
-        },
-        {
-            "Strategy": "Dry Air-Cooling",
-            "Household Water Equivalent": f"{results_dry['community_ledger']['household_water_equivalent_days']:,} families/day",
-            "Peak Grid Demand (MW)": f"{results_dry['community_ledger']['peak_grid_demand_mw']} MW",
-            "Aquifer Stress Zone": results_dry["community_ledger"]["water_stress_zone"],
-            "Grid Strain Risk": results_dry["community_ledger"]["grid_strain_risk"]
-        },
-        {
-            "Strategy": "Hybrid Adiabatic",
-            "Household Water Equivalent": f"{results_hybrid['community_ledger']['household_water_equivalent_days']:,} families/day",
-            "Peak Grid Demand (MW)": f"{results_hybrid['community_ledger']['peak_grid_demand_mw']} MW",
-            "Aquifer Stress Zone": results_hybrid["community_ledger"]["water_stress_zone"],
-            "Grid Strain Risk": results_hybrid["community_ledger"]["grid_strain_risk"]
-        }
-    ])
-    st.table(comm_df.set_index("Strategy"))
-
-st.success("Verification Status: All numerical calculations are deterministic and verified against Karimi et al. (2022) thermodynamic boundaries.")
+st.subheader("Community ledger")
+rows = []
+for a in assessments.values():
+    cl = a.community_ledger
+    for ind in (cl.water_headroom_share_pct, cl.substation_peak_demand_share_pct, cl.aquifer_stress_classification,
+                cl.tanker_dependency_index, cl.grid_outage_risk_index, cl.grid_carbon_intensity):
+        rows.append({
+            "Profile": a.cooling_name, "Indicator": ind.name, "Value": ind.formatted_value,
+            "Source": ind.source_label, "Resolution": ind.geographic_resolution,
+            "Confidence": ind.confidence.value,
+        })
+st.dataframe(pd.DataFrame(rows))

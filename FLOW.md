@@ -229,22 +229,13 @@ python -m pytest tests/test_engine.py -v
 python -m evals.run_evals
 ```
 
-### 3. Run Standalone Standouts (Engine & ADK Verifier)
-```powershell
-# Sourced thermodynamic engine
-python engine.py
-
-# ADK Agent2Agent Verifier audit script
-python adk_verifier.py
-```
-
-### 4. Run Interactive Web UI (FastAPI + Static UI)
+### 3. Run Interactive Web UI (FastAPI + Static UI)
 ```powershell
 python -m uvicorn api.main:app --host 127.0.0.1 --port 8000
 ```
 Open **`http://127.0.0.1:8000/`** to interact with the full dashboard.
 
-### 5. Run Streamlit UI Alternative
+### 4. Run Streamlit UI Alternative (same engine)
 ```powershell
 streamlit run streamlit_app.py
 ```

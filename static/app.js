@@ -455,7 +455,7 @@ function renderDualLedgers(assessments) {
     <div class="ledger-metric-card">
       <div class="metric-meta">
         <span class="metric-name">Utility Water Headroom Share</span>
-        <span class="metric-source">${evapComm.water_headroom_share_pct.source_label}</span>
+        <span class="metric-source">${escapeHtml(evapComm.water_headroom_share_pct.source_label)}</span>
       </div>
       <div class="metric-values-row">
         <div class="val-item"><span class="val-tag">Evap</span><span class="val-number" style="color:#f43f5e;">${evapComm.water_headroom_share_pct.formatted_value}</span></div>
@@ -479,7 +479,7 @@ function renderDualLedgers(assessments) {
     <div class="ledger-metric-card">
       <div class="metric-meta">
         <span class="metric-name">Local Substation Peak Impact</span>
-        <span class="metric-source">${evapComm.substation_peak_demand_share_pct.source_label}</span>
+        <span class="metric-source">${escapeHtml(evapComm.substation_peak_demand_share_pct.source_label)}</span>
       </div>
       <div class="metric-values-row">
         <div class="val-item"><span class="val-tag">Evap</span><span class="val-number">${evapComm.substation_peak_demand_share_pct.formatted_value}</span></div>
@@ -491,22 +491,22 @@ function renderDualLedgers(assessments) {
     <div class="ledger-metric-card">
       <div class="metric-meta">
         <span class="metric-name">Aquifer Stress Classification</span>
-        <span class="metric-source">${evapComm.aquifer_stress_classification.source_label}</span>
+        <span class="metric-source">${escapeHtml(evapComm.aquifer_stress_classification.source_label)}</span>
       </div>
       <div class="metric-values-row">
         <span class="val-number" style="color:#fbbf24;">${evapComm.aquifer_stress_classification.formatted_value}</span>
-        <span class="confidence-chip conf-high">HIGH CONF</span>
+        <span class="confidence-chip conf-${evapComm.aquifer_stress_classification.confidence}">${evapComm.aquifer_stress_classification.confidence.toUpperCase()} CONF</span>
       </div>
     </div>
 
     <div class="ledger-metric-card">
       <div class="metric-meta">
         <span class="metric-name">Tanker Dependency Index</span>
-        <span class="metric-source">${evapComm.tanker_dependency_index.source_label}</span>
+        <span class="metric-source">${escapeHtml(evapComm.tanker_dependency_index.source_label)}</span>
       </div>
       <div class="metric-values-row">
         <span class="val-number">${evapComm.tanker_dependency_index.formatted_value}</span>
-        <span class="confidence-chip conf-medium">MED CONF</span>
+        <span class="confidence-chip conf-${evapComm.tanker_dependency_index.confidence}">${evapComm.tanker_dependency_index.confidence.toUpperCase()} CONF</span>
       </div>
     </div>
   `;
@@ -541,7 +541,7 @@ function renderCoveragePanel(cov) {
       </div>
 
       <div style="background:#0f1624; padding:0.85rem; border-radius:6px; font-size:0.75rem; color:#94a3b8;">
-        <strong>Data Quality Finding:</strong> ${cov.confidence_impact}
+        <strong>Data Quality Finding:</strong> ${escapeHtml(cov.confidence_impact)}
       </div>
     </div>
 
@@ -763,16 +763,16 @@ async function runLiveEvals() {
 
     modalBody.innerHTML = `
       <div style="margin-bottom:1rem; padding:0.75rem 1rem; background:${data.all_passed ? 'rgba(16,185,129,0.15)' : 'rgba(244,63,94,0.15)'}; border-radius:6px; font-weight:600; color:${data.all_passed ? '#34d399' : '#f87171'};">
-        ${data.all_passed ? '✓ ALL 5 SECTION 8 SPECIFICATION CHECKS PASSED' : 'SOME CHECKS FAILED'}
+        ${data.all_passed ? `✓ ALL ${data.checks.length} EVALUATION CHECKS PASSED` : 'SOME CHECKS FAILED'}
       </div>
 
       <div style="display:flex; flex-direction:column; gap:0.5rem;">
         ${data.checks.map(c => `
           <div class="eval-item">
             <div>
-              <strong>${c.check}</strong>
+              <strong>${escapeHtml(c.check)}</strong>
               <div style="font-size:0.72rem; color:#94a3b8; font-family:var(--font-mono); margin-top:0.2rem;">
-                ${Object.entries(c).filter(([k]) => k !== 'check' && k !== 'success').map(([k, v]) => `${k}: ${v}`).join(' &bull; ')}
+                ${escapeHtml(Object.entries(c).filter(([k]) => k !== 'check' && k !== 'success').map(([k, v]) => `${k}: ${v}`).join(' • '))}
               </div>
             </div>
             <span class="eval-badge ${c.success ? 'badge-pass' : 'badge-fail'}">

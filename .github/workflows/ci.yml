@@ -1,0 +1,29 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      # No GEMINI_API_KEY in CI: tests cover the deterministic path and mock the model.
+      - run: python -m pytest -q
+      - run: python -m evals.run_evals
+      - run: node --check static/app.js
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t aquacarbon-ci .
+      - run: |
+          docker run -d --rm --name ci -p 8080:8080 aquacarbon-ci
+          for i in $(seq 1 20); do curl -sf localhost:8080/api/health && break || sleep 1; done
+          curl -sf localhost:8080/api/health
+          curl -sf localhost:8080/api/evals/run | grep -q '"all_passed":true'
