@@ -31,7 +31,7 @@ Status values: `candidate`, `verified`, `rejected`.
 | INR 8.50/kWh | Not verified. Base HT energy charge reported as 6.70 |
 | INR 95/kL | Not verified. Official BWSSB order not found |
 | 135 LPCD | Plausible via a third-party snippet. Manual page not found |
-| Evaporative WUE 2.10 L/kWh | **Looks high.** LBNL reports US averages of 0.36-0.48 L/kWh. Needs a cited source or a lower figure |
+| Evaporative WUE 2.10 L/kWh (annual) | **High-end but physically possible.** First-principles ceiling at the engine's stated CoC 4.5 is 2.36 L/kWh (3.6 MJ / 2.26 MJ/kg, x1.15 compressor heat, x(1+1/3.5) blowdown); 2.10 is 89% of it, so it assumes nearly all heat leaves by evaporation. The dry-summer figure (2.63) exceeds that CoC-4.5 ceiling. LBNL's 0.36-0.48 L/kWh is a US fleet average across all cooling types and is NOT a like-for-like comparison. Still uncited. See `tests/test_bands_and_physics.py` |
 | Karimi et al. 2022 | Confirms direction only (air-cooled PUE ~13% higher, WUE 66% lower). No absolute values, so engine base values are uncited |
 | Coverage-check areas (42.8 km2, 23.4 km2, densities) | Hard-coded, no source |
 

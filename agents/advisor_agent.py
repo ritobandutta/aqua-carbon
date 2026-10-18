@@ -5,6 +5,7 @@ Synthesizes deterministic scenario assessments into two distinct, high-fidelity 
 2. Community & Municipal Brief (Water headroom impact, domestic equivalents, public inquiry questions)
 """
 
+import re
 from typing import Dict, Any, Optional
 from engine.models import ProfileAssessment, ScenarioInput, CoolingType
 
@@ -117,3 +118,69 @@ class AdvisorAgent:
         ])
 
         return "\n".join(lines)
+
+
+# ---- Gemini-drafted briefs: prose from the model, numbers only from the engine ----
+
+PLACEHOLDER = re.compile(r"\{\{([a-z_]+)\.([a-z_0-9]+)\}\}")
+
+
+def build_fact_sheet(assessments: Dict[str, ProfileAssessment]) -> Dict[str, Dict[str, str]]:
+    """Pre-formatted, unit-tagged strings the model may insert by name. Key = profile id."""
+    facts: Dict[str, Dict[str, str]] = {}
+    for key, a in assessments.items():
+        fl, cl = a.facility_ledger, a.community_ledger
+        facts[key] = {
+            "pue": f"{fl.pue:.2f}",
+            "water": f"{fl.direct_water_consumption_ml:.1f} ML",
+            "energy": f"{fl.total_facility_energy_mwh:,.0f} MWh",
+            "carbon": f"{fl.scope2_carbon_tonnes:,.0f} tCO2e",
+            "cost": f"₹{fl.annual_operating_cost_inr_crores:.2f} Cr",
+            "headroom": cl.water_headroom_share_pct.formatted_value,
+            "substation": cl.substation_peak_demand_share_pct.formatted_value,
+            "households": cl.household_water_equivalent_count.formatted_value,
+            "aquifer": cl.aquifer_stress_classification.formatted_value,
+        }
+    return facts
+
+
+def brief_prompt(audience: str, scenario: ScenarioInput, facts: Dict[str, Dict[str, str]]) -> str:
+    fields = sorted(next(iter(facts.values())).keys())
+    profiles = sorted(facts)
+    tone = ("engineers and operators: engineering trade-offs, reliability and cost, and pre-permitting checks"
+            if audience == "operator" else
+            "a municipal council and residents, in plain language, ending with questions to ask at a public hearing")
+    return (
+        f"Write a markdown brief for {tone}.\n"
+        f"Site: {scenario.region}, {scenario.it_capacity_mw:.1f} MW IT load, season {scenario.season.value}. "
+        f"Facility inputs are illustrative. Results are modelled potential impact, not measured savings.\n\n"
+        f"HARD RULES:\n"
+        f"1. Write NO digits of your own for any metric. To cite a figure, use a placeholder {{{{profile.field}}}}.\n"
+        f"2. profile is one of: {', '.join(profiles)}. field is one of: {', '.join(fields)}.\n"
+        f"3. Do not compare numbers, compute differences or percentages, or state any figure not available as a placeholder.\n"
+        f"4. Say where data is unverified or uncertain. Do not claim savings are verified.\n"
+        f"5. Profiles: evaporative = cooling towers; dry_cooling = air-cooled chillers; hybrid_adiabatic = dry with adiabatic trim.\n"
+        f"Example: 'Evaporative cooling reaches a PUE of {{{{evaporative.pue}}}} and uses {{{{evaporative.water}}}} of water a year.'"
+    )
+
+
+def fill_placeholders(text: str, facts: Dict[str, Dict[str, str]]) -> Optional[str]:
+    """Substitutes placeholders. Returns None if any placeholder is unknown, which means the model
+    invented a field and the draft must be rejected."""
+    bad = []
+
+    def sub(m):
+        prof, field = m.group(1), m.group(2)
+        if prof in facts and field in facts[prof]:
+            return facts[prof][field]
+        bad.append(m.group(0))
+        return m.group(0)
+
+    out = PLACEHOLDER.sub(sub, text)
+    return None if bad else out
+
+
+def has_bare_metric_digits(text: str) -> bool:
+    """True if the model typed a unit-tagged metric itself before substitution."""
+    from agents.verifier_agent import extract_claims
+    return len(extract_claims(PLACEHOLDER.sub("", text))) > 0

@@ -84,4 +84,4 @@
   status: confirmed_primary
   evidence: 'p.48: "average WUE ... just over 0.36 L/kWh through 2023", "between 0.45 and 0.48 L/kWh" after; p.46-47: hyperscale "0.1-0.3 L/kWh"; Section 5: "4.52 L/kWh" indirect water.'
   licence: "US Government non-exclusive licence only; no open licence"
-  verdict: "US fleet averages are far below the engine's evaporative WUE of 2.10 L/kWh (annual). That base value looks high and needs a source or a lower, cited figure."
+  verdict: "US fleet averages (all cooling types incl. air-cooled and economizers) are not comparable to a purely evaporative design. Engine evaporative WUE 2.10 is 89% of the first-principles ceiling at CoC 4.5 (2.36), so it is high-end but possible. Still needs a cited source."

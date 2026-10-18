@@ -291,6 +291,8 @@ async function loadScenario() {
     renderBurdenMatrix(data.assessments);
     renderDualLedgers(data.assessments);
     renderBriefContent();
+    const prov = document.getElementById("brief-provenance");
+    if (prov) prov.textContent = provenanceLine(data);
   } catch (err) {
     console.error("Failed to load scenario:", err);
   }
@@ -416,7 +418,7 @@ function renderDualLedgers(assessments) {
     <div class="ledger-metric-card">
       <div class="metric-meta">
         <span class="metric-name">Direct Annual Water Volume</span>
-        <span class="metric-source">Cooling tower evaporation + drift + blowdown</span>
+        <span class="metric-source">Cooling tower evaporation + drift + blowdown. Evaporative sensitivity range: ${bandRange(state.scenarioData, "evaporative", "direct_water_ml", "ML", 0)}</span>
       </div>
       <div class="metric-values-row">
         <div class="val-item"><span class="val-tag">Evap</span><span class="val-number" style="color:#f43f5e;">${evap.direct_water_consumption_ml.toFixed(1)} ML</span></div>
@@ -428,7 +430,7 @@ function renderDualLedgers(assessments) {
     <div class="ledger-metric-card">
       <div class="metric-meta">
         <span class="metric-name">Total Annual Facility Energy</span>
-        <span class="metric-source">Calculated across 8,760 annual operational hours</span>
+        <span class="metric-source">Calculated across 8,760 annual operational hours. Dry-cooling range: ${bandRange(state.scenarioData, "dry_cooling", "facility_energy_mwh", "MWh", 0)}</span>
       </div>
       <div class="metric-values-row">
         <div class="val-item"><span class="val-tag">Evap</span><span class="val-number">${evap.total_facility_energy_mwh.toLocaleString()} MWh</span></div>
@@ -440,7 +442,7 @@ function renderDualLedgers(assessments) {
     <div class="ledger-metric-card">
       <div class="metric-meta">
         <span class="metric-name">Annual Operating Cost (OpEx)</span>
-        <span class="metric-source">Commercial power tariff (₹8.5/kWh) + Water tariff</span>
+        <span class="metric-source">Illustrative tariffs (₹8.5/kWh, ₹95/kL, unverified). Evaporative range: ${bandRange(state.scenarioData, "evaporative", "operating_cost_inr_crores", "Cr", 0)}</span>
       </div>
       <div class="metric-values-row">
         <div class="val-item"><span class="val-tag">Evap</span><span class="val-number">₹${evap.annual_operating_cost_inr_crores.toFixed(1)} Cr</span></div>
@@ -707,7 +709,7 @@ function renderBriefContent() {
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem;">
         <div>
           <h3>Independent Verifier Audit Report</h3>
-          <p style="font-size:0.8rem; color:#94a3b8;">Cryptographically anchored to deterministic physical engine execution.</p>
+          <p style="font-size:0.8rem; color:#94a3b8;">SHA-256 digest over the check results; recomputed from the deterministic engine.</p>
         </div>
         <div class="verifier-badge ${verifier.status === 'PASSED' ? 'success' : ''}">
           ${verifier.signature}
@@ -717,7 +719,7 @@ function renderBriefContent() {
       <div style="display:flex; gap:1.5rem; margin-bottom:1.5rem;">
         <div style="background:#0f1624; padding:0.8rem 1.2rem; border-radius:6px;">
           <span style="font-size:0.7rem; color:#94a3b8; text-transform:uppercase;">Status</span>
-          <div style="font-family:var(--font-mono); font-size:1.1rem; font-weight:bold; color:#34d399;">${verifier.status}</div>
+          <div style="font-family:var(--font-mono); font-size:1.1rem; font-weight:bold; color:${verifier.status === 'PASSED' ? '#34d399' : '#f87171'};">${verifier.status}</div>
         </div>
         <div style="background:#0f1624; padding:0.8rem 1.2rem; border-radius:6px;">
           <span style="font-size:0.7rem; color:#94a3b8; text-transform:uppercase;">Passed Checks</span>
@@ -788,6 +790,26 @@ async function runLiveEvals() {
 }
 
 // Lightweight Markdown Formatter
+function bandRange(data, profile, metric, unit, digits) {
+  const b = data && data.uncertainty_bands && data.uncertainty_bands[profile] && data.uncertainty_bands[profile][metric];
+  if (!b) return "n/a";
+  return `${b.low.toFixed(digits)}–${b.high.toFixed(digits)} ${unit} (sensitivity, not a confidence interval)`;
+}
+
+function bandText(bands, profile, metric, unit, digits) {
+  const b = bands && bands[profile] && bands[profile][metric];
+  if (!b) return "";
+  return ` (range ${b.low.toFixed(digits)}–${b.high.toFixed(digits)} ${unit})`;
+}
+
+function provenanceLine(data) {
+  if (!data) return "";
+  const src = data.brief_sources ? `Briefs: operator=${data.brief_sources.operator}, community=${data.brief_sources.community}` : "";
+  const ver = data.verifier_mode ? ` | Verifier: ${data.verifier_mode}` : "";
+  const run = data.run_id ? ` | Run ${data.run_id}` : "";
+  return escapeHtml(src + ver + run);
+}
+
 function escapeHtml(s) {
   return String(s)
     .replace(/&/g, "&amp;")

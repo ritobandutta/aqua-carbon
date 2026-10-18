@@ -22,9 +22,18 @@ make run                  # http://127.0.0.1:8000  (set PORT=8010 if 8000 is bus
 7. **What-if.** Switch season from winter to dry summer at the same limits. The feasible set changes (evaporative drops out). Say what flipped and why.
 8. **Close.** Run the evals from the header. Then state limitations: annual multipliers, not an hourly simulation; regional values pending the dataset audit; modelled potential impact, not measured savings; any real deployment needs qualified engineering review.
 
+## Optional: show the separate verifier
+
+```bash
+make run-verifier        # terminal 1
+make run-split           # terminal 2
+```
+Open the app: the line above the brief reads `Verifier: remote`. Stop the verifier and re-run: the brief is blocked and shows `UNVERIFIED:verifier_unreachable`. The tool refuses to show output it could not check.
+
 ## Things not to claim
 
 - That numbers are sourced or verified before `docs/DATA_SOURCES.md` says so.
 - "Zero hallucination". The verifier checks numbers that carry a unit, not every statement.
-- ADK, MCP or A2A. The agents are in-process classes.
+- ADK, MCP or A2A. The agents are plain classes; the verifier can run as a separate HTTP service, which is not the A2A protocol.
+- That the uncertainty ranges are confidence intervals. They are sensitivity ranges around unverified inputs.
 - Measured savings. Everything is modelled.

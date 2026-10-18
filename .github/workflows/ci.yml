@@ -27,3 +27,12 @@ jobs:
           for i in $(seq 1 20); do curl -sf localhost:8080/api/health && break || sleep 1; done
           curl -sf localhost:8080/api/health
           curl -sf localhost:8080/api/evals/run | grep -q '"all_passed":true'
+  verifier-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -f Dockerfile.verifier -t aquacarbon-verifier-ci .
+      - run: |
+          docker run -d --rm --name v -p 8081:8080 aquacarbon-verifier-ci
+          for i in $(seq 1 20); do curl -sf localhost:8081/health && break || sleep 1; done
+          curl -sf localhost:8081/health

@@ -47,6 +47,36 @@ Notes:
 - Using `GEMINI_API_KEY` goes through the Gemini API (AI Studio), not Vertex AI. Vertex AI would need code changes (`genai.Client(vertexai=True, project=..., location=...)`) and the Vertex AI API enabled. That is not implemented yet.
 - Tear down with `gcloud run services delete aquacarbon-dc --region us-central1` and `gcloud secrets delete gemini-api-key`.
 
+### Optional: deploy the verifier as its own Cloud Run service
+
+The verifier has its own image, `Dockerfile.verifier`. `gcloud run deploy --source .` only builds the default `Dockerfile`, so build this one explicitly. **This path has not been run on GCP.**
+
+```bash
+IMG=<REGION>-docker.pkg.dev/<PROJECT_ID>/<ARTIFACT_REPO>/aquacarbon-verifier
+gcloud artifacts repositories create <ARTIFACT_REPO> --repository-format=docker --location=<REGION>   # once
+docker build -f Dockerfile.verifier -t $IMG . && docker push $IMG    # needs `gcloud auth configure-docker <REGION>-docker.pkg.dev`
+
+gcloud run deploy aquacarbon-verifier --image $IMG --region <REGION> \
+  --no-allow-unauthenticated --min-instances 0 --max-instances 3 --memory 256Mi
+VER_URL=$(gcloud run services describe aquacarbon-verifier --region <REGION> --format 'value(status.url)')
+
+# let the main service's runtime service account call the private verifier
+gcloud run services add-iam-policy-binding aquacarbon-verifier --region <REGION> \
+  --member "serviceAccount:<MAIN_SERVICE_ACCOUNT>" --role roles/run.invoker
+
+# point the main service at it, with ID-token auth
+gcloud run services update aquacarbon-dc --region us-central1 \
+  --set-env-vars VERIFIER_URL=$VER_URL,VERIFIER_AUTH=google
+```
+
+With `VERIFIER_AUTH=google` the client fetches a Google-signed ID token (audience = the verifier URL) from the runtime service account. If the verifier is unreachable or rejects the call, the main service blocks output instead of showing it unverified.
+
+Local check (verified): `make run-verifier` in one terminal, `make run-split` in another.
+
+### Vertex AI instead of an API key
+
+Set `GOOGLE_GENAI_USE_VERTEXAI=true`, `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, enable `aiplatform.googleapis.com`, and give the Cloud Run service account `roles/aiplatform.user`. No `GEMINI_API_KEY` is needed. **Not tested.** Confirm the model ID is available in your region.
+
 The sections below describe the **planned** multi-service deployment and have not been implemented.
 
 ## 0. Prerequisites

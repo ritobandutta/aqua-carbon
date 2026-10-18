@@ -55,6 +55,17 @@ Last updated 2026-10-18. Covers the implementation OnHighEngineer pushed (46 fil
 
 Limitations 3 and 4 above are resolved. Limitation 2 remains open and is now documented in detail.
 
+## Update 2026-10-18 (latest): engine bands, separate verifier, Gemini briefs
+
+- **Sensitivity ranges** (`evaluate_with_bands`): water, energy, carbon and cost each shown as low/central/high. These are **assumed sensitivity ranges around unverified inputs, not sourced confidence intervals**, and the UI says so.
+- **Physics bound tests** (`tests/test_bands_and_physics.py`): evaporative WUE checked against a derived floor and ceiling in every season.
+- **Verifier as a separate service** (`verifier_service/`, `Dockerfile.verifier`, `make run-verifier`). Set `VERIFIER_URL` and all verification runs there. The service recomputes ground truth itself from the scenario, so the caller cannot supply favourable numbers. If the service is configured but unreachable, the output is **blocked (fails closed)**. Verified with two real processes. This is plain HTTP, not the A2A protocol.
+- **Gemini-drafted briefs**: the model writes prose with placeholders like `{{evaporative.pue}}`, never digits. The engine fills them, appends an engine-generated figures table, and the verifier still checks the result. A draft with its own numbers, an invented placeholder, or a failed check falls back to the template. Tested with a mocked model only.
+- **Vertex AI path**: `GOOGLE_GENAI_USE_VERTEXAI=true` uses Application Default Credentials. Untested, no credentials available.
+- Correction: the earlier note that 2.10 L/kWh "looks high versus LBNL" compared against a fleet average and was not like-for-like. See `DATA_SOURCES.md`.
+
+Still not done: official-source verification of every regional number (needs a person with access), live Gemini and Vertex tests (need a key or project), hourly simulation, real ADK/MCP/A2A protocols, Gemma, Kannada/Hindi brief.
+
 ## Plan status
 
 | Plan phase | State |
