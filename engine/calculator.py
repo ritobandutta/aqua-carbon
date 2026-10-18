@@ -533,6 +533,8 @@ def evaluate_with_bands(scenario: ScenarioInput) -> Dict[str, Dict[str, Dict[str
     for ct in scenario.selected_profiles:
         lo, mid, hi = ledger(ct, -1), ledger(ct, 0), ledger(ct, +1)
         out[ct.value] = {
+            "pue": {"low": lo.pue, "central": mid.pue, "high": hi.pue},
+            "wue_l_per_kwh": {"low": lo.wue, "central": mid.wue, "high": hi.wue},
             "direct_water_ml": {"low": lo.direct_water_consumption_ml, "central": mid.direct_water_consumption_ml, "high": hi.direct_water_consumption_ml},
             "facility_energy_mwh": {"low": lo.total_facility_energy_mwh, "central": mid.total_facility_energy_mwh, "high": hi.total_facility_energy_mwh},
             "scope2_carbon_tonnes": {"low": lo.scope2_carbon_tonnes, "central": mid.scope2_carbon_tonnes, "high": hi.scope2_carbon_tonnes},

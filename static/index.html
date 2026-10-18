@@ -3,454 +3,188 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AquaCarbon DC — Commons Edition (v2) | Dual-Ledger Data Center Impact</title>
-  <meta name="description" content="AquaCarbon DC evaluates data-center cooling choices across facility economics and community commons, featuring dual ledgers, burden shifting, and independent verifier auditing.">
+  <title>AquaCarbon DC | The cost of cold</title>
+  <meta name="description" content="Every data-center cooling choice moves a burden onto the water system, the power grid or the atmosphere. AquaCarbon DC shows both ledgers: what the facility spends and what the community absorbs.">
+  <meta name="theme-color" content="#0A0A0A">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 fill=%27%230A0A0A%27/%3E%3Crect x=%277%27 y=%2715%27 width=%2718%27 height=%272%27 fill=%27%236366F1%27/%3E%3C/svg%3E">
+  <script>
+    document.documentElement.classList.add('js');
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) document.documentElement.classList.add('reduced');
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400&family=JetBrains+Mono:wght@300&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/landing.css">
 </head>
-<body>
-  <div class="app-container">
-    <!-- Top Global Header -->
-    <header class="app-header">
-      <div class="brand">
-        <div class="logo-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
-            <circle cx="12" cy="14" r="3"></circle>
-          </svg>
+<body class="landing">
+  <a class="skip" href="#engine">Skip to content</a>
+
+  <div class="intro" id="intro" aria-hidden="true">
+    <p class="intro-line">every cooling choice moves a burden.</p>
+  </div>
+
+  <header class="nav">
+    <div class="wrap">
+      <a class="wordmark" href="/" aria-label="AquaCarbon DC, home">Aqua<b>Carbon</b> DC</a>
+      <nav class="nav-links" aria-label="Page sections">
+        <a href="#engine">Engine</a>
+        <a href="#day">The day</a>
+        <a href="#scope">Scope</a>
+        <a href="#faq">Questions</a>
+        <a class="btn" href="/app">Workbench</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" id="top">
+      <canvas class="hero-canvas" id="hero-canvas" aria-hidden="true"></canvas>
+      <div class="veil"></div>
+      <div class="wrap hero-content">
+        <div class="meta-row">
+          <span>Data-center cooling</span>
+          <span>Bengaluru &middot; Chennai &middot; Mumbai</span>
+          <span>Energy &middot; Water &middot; Carbon</span>
+          <span>Operator &amp; community</span>
         </div>
-        <div class="brand-text">
-          <h1>AquaCarbon DC <span class="badge-commons">Commons Edition v2</span></h1>
-          <p class="tagline">Dual-Ledger Cooling Trade-offs &bull; Operator Economics vs Community Water Commons</p>
+        <h1 class="headline" id="headline" aria-label="The cost of cold">The cost of cold</h1>
+        <div class="hero-foot">
+          <p class="hero-copy">Compare how three cooling designs spend water, power and carbon, and who in the host community absorbs each cost.</p>
+          <div class="hero-actions">
+            <a class="btn primary" href="/app">Open the workbench</a>
+            <a class="btn" href="#engine">How it works</a>
+          </div>
         </div>
-      </div>
-      <div class="header-actions">
-        <div class="cloud-run-badge" title="GCP Cloud Run Ready, Zero-Instance Scalable">
-          <span class="status-pulse"></span>
-          <span>Cloud Run Ready &bull; Fast Boot</span>
-        </div>
-        <button id="btn-run-evals" class="btn-evals" title="Execute Section 8 Evaluation Suite">
-          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
-          Run Live Evals
-        </button>
-      </div>
-    </header>
-
-    <!-- Navigation / Mode Tabs -->
-    <nav class="app-nav">
-      <button class="nav-tab active" data-tab="dashboard">
-        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
-        Dual-Ledger Explorer
-      </button>
-      <button class="nav-tab" data-tab="coverage">
-        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
-        Coverage Disparity Check
-        <span class="tab-indicator alert">Gap Flagged</span>
-      </button>
-      <button class="nav-tab" data-tab="planner">
-        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-        Constraint-Aware Planner
-      </button>
-      <button class="nav-tab" data-tab="investigator">
-        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        Agentic Investigator (Gemini)
-      </button>
-      <button class="nav-tab" data-tab="briefs">
-        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-        Dual Briefs &amp; Verifier Audit
-      </button>
-      <button class="nav-tab" data-tab="arbiter">
-        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-        24h Arbiter &amp; AI Dispatcher
-        <span class="tab-indicator new">New</span>
-      </button>
-    </nav>
-
-    <!-- Control Ribbon / Scenario Context -->
-    <section class="control-ribbon">
-      <div class="control-group">
-        <label for="preset-selector">Scenario Preset</label>
-        <select id="preset-selector" class="custom-select">
-          <option value="bengaluru">Bengaluru Whitefield (15 MW Hyperscale - Overexploited Aquifer)</option>
-          <option value="chennai">Chennai Ambattur (30 MW Coastal - Desal &amp; Peak Stress)</option>
-          <option value="mumbai">Navi Mumbai Rabale (50 MW AI Campus - Industrial Zone)</option>
-        </select>
-      </div>
-
-      <div class="control-group">
-        <label for="season-selector">Operating Season (What-If)</label>
-        <select id="season-selector" class="custom-select">
-          <option value="annual_average">Annual Average Climate</option>
-          <option value="dry_summer">Dry Summer (36.5°C, 38% RH - Extreme Stress)</option>
-          <option value="monsoon">Monsoon Season (26.8°C, 82% RH - High Humidity)</option>
-          <option value="winter">Winter Economizer (22.0°C, 55% RH)</option>
-        </select>
-      </div>
-
-      <div class="control-group">
-        <label for="workload-selector">AI Workload Flexibility (Cooling Lever)</label>
-        <select id="workload-selector" class="custom-select">
-          <option value="static_inference">24/7 AI Inference (Flat Unyielding Load)</option>
-          <option value="ai_training_flexible">Flexible AI Training (Shift -40% from 12PM-4PM Peak Heat)</option>
-        </select>
-      </div>
-
-      <div class="control-group slider-group">
-        <div class="slider-header">
-          <label for="capacity-slider">Design IT Workload</label>
-          <span id="capacity-val" class="slider-value">15 MW</span>
-        </div>
-        <input type="range" id="capacity-slider" min="5" max="60" step="5" value="15">
-      </div>
-
-      <div class="control-group slider-group">
-        <div class="slider-header">
-          <label for="grid-slider">Grid Carbon Intensity</label>
-          <span id="grid-val" class="slider-value">710 gCO2/kWh</span>
-        </div>
-        <input type="range" id="grid-slider" min="300" max="900" step="20" value="710">
-      </div>
-
-      <div class="control-group actions-group">
-        <button id="btn-recalculate" class="btn-primary">
-          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
-          Recalculate Ledgers
-        </button>
       </div>
     </section>
 
-    <!-- Main Content Area -->
-    <main class="app-main">
-
-      <!-- TAB 1: DUAL-LEDGER EXPLORER -->
-      <section id="tab-dashboard" class="tab-content active">
-        <!-- Burden Shifting Visualizer -->
-        <div class="section-card burden-card">
-          <div class="card-header">
-            <div>
-              <h2>The Burden-Shifting Matrix</h2>
-              <p class="section-subtitle">
-                Every cooling choice moves a burden somewhere: onto the <strong>water system</strong>, onto the <strong>power grid</strong>, or into the <strong>atmosphere</strong>. There is no single collapsed score.
-              </p>
-            </div>
-            <div class="verifier-badge" id="dash-verifier-badge">
-              <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-              <span>Deterministic Engine Verified</span>
-            </div>
-          </div>
-
-          <div class="burden-grid" id="burden-grid">
-            <!-- Rendered dynamically -->
-          </div>
+    <!-- 01 -->
+    <section class="band" id="engine">
+      <div class="wrap">
+        <div class="eyebrow rv">01 &middot; Engine</div>
+        <div class="band-head rv">
+          <h2>A model explains. The engine counts.</h2>
+          <p class="lede">Four parts, each with one job. Every number comes from one deterministic engine, and every claim built on those numbers is checked by something that did not write it.</p>
         </div>
-
-        <!-- Side-by-Side Dual Ledgers -->
-        <div class="ledgers-container">
-          <!-- Facility Ledger (Operator Side) -->
-          <div class="ledger-column facility-ledger">
-            <div class="ledger-header">
-              <div class="ledger-icon facility-icon">
-                <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" fill="none" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
-              </div>
-              <div>
-                <h3>Facility Ledger</h3>
-                <span class="ledger-subtitle">Operator View: Energy, PUE, WUE, Carbon &amp; OpEx</span>
-              </div>
-            </div>
-
-            <div class="ledger-cards-grid" id="facility-ledger-cards">
-              <!-- Rendered dynamically -->
-            </div>
-          </div>
-
-          <!-- Community Ledger (Host Community Side) -->
-          <div class="ledger-column community-ledger">
-            <div class="ledger-header">
-              <div class="ledger-icon community-icon">
-                <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" fill="none" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-              </div>
-              <div>
-                <h3>Community Ledger</h3>
-                <span class="ledger-subtitle">Shared Commons: Water Headroom, Groundwater &amp; Grid Peak</span>
-              </div>
-            </div>
-
-            <div class="ledger-cards-grid" id="community-ledger-cards">
-              <!-- Rendered dynamically -->
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- TAB 2: COVERAGE DISPARITY CHECK -->
-      <section id="tab-coverage" class="tab-content">
-        <div class="section-card">
-          <div class="card-header">
-            <div>
-              <h2>Spatial Coverage Disparity Check</h2>
-              <p class="section-subtitle">
-                Compares independent satellite settlement footprints against official piped-water utility consumer registries. Disagreement flags unserved, tanker-dependent communities sharing the same aquifer.
-              </p>
-            </div>
-            <div class="confidence-tag warning">
-              <span>Data Quality Alert</span>
-            </div>
-          </div>
-
-          <div class="coverage-layout" id="coverage-layout">
-            <!-- Rendered dynamically -->
-          </div>
-        </div>
-      </section>
-
-      <!-- TAB 3: CONSTRAINT-AWARE PLANNER -->
-      <section id="tab-planner" class="tab-content">
-        <div class="section-card">
-          <div class="card-header">
-            <div>
-              <h2>Constraint-Aware Planner</h2>
-              <p class="section-subtitle">
-                Set facility limits and community limits simultaneously. The planner searches the deterministic engine and returns the feasible set. If nothing satisfies every constraint, it refuses to manufacture false compromises.
-              </p>
-            </div>
-          </div>
-
-          <div class="planner-layout">
-            <div class="planner-controls-panel">
-              <div class="control-box">
-                <h4>Facility Engineering Limits</h4>
-                <div class="form-group">
-                  <label for="constraint-pue">Max Allowable PUE</label>
-                  <input type="number" id="constraint-pue" step="0.05" min="1.10" max="1.60" value="1.35">
-                </div>
-                <div class="form-group">
-                  <label for="constraint-cost">Max Annual OpEx (₹ Crores)</label>
-                  <input type="number" id="constraint-cost" step="10" min="50" max="250" value="160">
-                </div>
-              </div>
-
-              <div class="control-box">
-                <h4>Community Commons Limits</h4>
-                <div class="form-group">
-                  <label for="constraint-headroom">Max Water Headroom Share (%)</label>
-                  <input type="number" id="constraint-headroom" step="5" min="5" max="150" value="50">
-                  <small class="hint-text">Ceiling on percentage of municipal industrial water allocation consumed</small>
-                </div>
-                <div class="form-group">
-                  <label for="constraint-grid">Max Substation Peak Load Share (%)</label>
-                  <input type="number" id="constraint-grid" step="5" min="10" max="60" value="35">
-                  <small class="hint-text">Ceiling on peak power draw as percentage of local 66kV substation</small>
-                </div>
-              </div>
-
-              <button id="btn-run-planner" class="btn-primary w-full">
-                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                Search Feasible Configurations
-              </button>
-            </div>
-
-            <div class="planner-results-panel" id="planner-results">
-              <div class="empty-state">
-                <p>Configure constraints and click "Search Feasible Configurations" to test feasibility.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- TAB 4: AGENTIC INVESTIGATOR -->
-      <section id="tab-investigator" class="tab-content">
-        <div class="section-card">
-          <div class="card-header">
-            <div>
-              <h2>Agentic Investigator (Gemini + Verifier)</h2>
-              <p class="section-subtitle">
-                Ask deep-dive questions about cooling trade-offs, thermodynamic physics, or seasonal flips. Every generated response is independently checked by the Verifier Agent against engine outputs.
-              </p>
-            </div>
-            <div class="verifier-badge success">
-              <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
-              <span>Verifier Enforced</span>
-            </div>
-          </div>
-
-          <div class="investigator-layout">
-            <div class="suggested-queries">
-              <span class="query-chip" data-q="Why does evaporative cooling save water but strain the grid?">Why does evaporative cooling save water but strain the grid?</span>
-              <span class="query-chip" data-q="What happens to the trade-off in dry summer vs monsoon season?">What happens to the trade-off in dry summer vs monsoon season?</span>
-              <span class="query-chip" data-q="How does hybrid adiabatic cooling reduce the community water burden?">How does hybrid adiabatic cooling reduce the community water burden?</span>
-              <span class="query-chip" data-q="Who bears the cost if the facility chooses air-cooled chillers?">Who bears the cost if the facility chooses air-cooled chillers?</span>
-            </div>
-
-            <div class="query-input-bar">
-              <input type="text" id="investigate-input" placeholder="Ask Gemini about this scenario's engineering and community trade-offs..." value="Why does evaporative cooling save water but strain the grid?">
-              <button id="btn-ask-gemini" class="btn-primary">
-                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                Investigate
-              </button>
-            </div>
-
-            <div class="investigator-output-card" id="investigator-output">
-              <div class="output-placeholder">
-                <p>Click a suggested query above or type your own question to run the grounded investigation.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- TAB 5: DUAL BRIEFS & VERIFIER AUDIT -->
-      <section id="tab-briefs" class="tab-content">
-        <div class="section-card">
-          <div class="card-header">
-            <div>
-              <h2>Dual Decision Briefs &amp; Verifier Audit</h2>
-              <p class="section-subtitle">
-                Two purpose-built briefs derived from the same mathematical scenario: an Operator &amp; Engineering Brief, and a Plain-Language Community Brief with public consultation questions.
-              </p>
-            </div>
-            <div class="brief-toggle-group">
-              <button class="btn-toggle active" data-brief="operator">Operator Brief</button>
-              <button class="btn-toggle" data-brief="community">Community Brief</button>
-              <button class="btn-toggle" data-brief="verifier">Verifier Audit Trail</button>
-            </div>
-          </div>
-
-          <div class="brief-display-container">
-            <div class="brief-actions">
-              <button id="btn-tamper-demo" class="btn-tamper" title="Inject 15% Hallucination to demonstrate Verifier catching error">
-                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-                Inject 15% Hallucination (Live Verifier Block Demo)
-              </button>
-              <button id="btn-copy-brief" class="btn-secondary">
-                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                Copy Markdown
-              </button>
-            </div>
-            <div id="brief-provenance" style="font-size:0.72rem; color:#94a3b8; font-family:var(--font-mono); margin:0.4rem 0;"></div>
-            <div class="markdown-preview" id="brief-markdown-content">
-              <!-- Rendered dynamically -->
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- TAB 6: 24-HOUR ARBITER & AI DISPATCHER -->
-      <section id="tab-arbiter" class="tab-content">
-        <div class="section-card">
-          <div class="card-header">
-            <div>
-              <h2>24-Hour Arbiter &amp; AI Dispatcher</h2>
-              <p class="section-subtitle">
-                Synthesizes <strong>FortyGuard's Agentic-Arbiter</strong> (ambient free-cooling hourly scheduling) and <strong>GCC 1st-Place CooL-LLM</strong> (AI batch compute load-shifting). Dynamically switches between night air economizers, mild dry chillers, and peak heat load deferral.
-              </p>
-            </div>
-            <div class="verifier-badge success">
-              <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-              <span>Hourly Diurnal Dispatch</span>
-            </div>
-          </div>
-
-          <!-- Arbiter Controls & KPI Highlights -->
-          <div class="arbiter-overview-panel">
-            <div class="arbiter-kpi-grid" id="arbiter-kpi-grid">
-              <div class="kpi-card accent-water">
-                <span class="kpi-label">Daily Water Saved</span>
-                <span class="kpi-val" id="arbiter-water-saved">-- L</span>
-                <span class="kpi-sub" id="arbiter-water-pct">--% vs Evaporative Baseline</span>
-              </div>
-              <div class="kpi-card accent-community">
-                <span class="kpi-label">Domestic Water Restored</span>
-                <span class="kpi-val" id="arbiter-hh-restored">--</span>
-                <span class="kpi-sub">Household-Days of Drinking Water</span>
-              </div>
-              <div class="kpi-card accent-grid">
-                <span class="kpi-label">Substation Peak Shaved</span>
-                <span class="kpi-val" id="arbiter-peak-shaved">-- MW</span>
-                <span class="kpi-sub" id="arbiter-peak-sub">Relieves 66kV Feeder Strain</span>
-              </div>
-              <div class="kpi-card accent-energy">
-                <span class="kpi-label">Free-Cooling Hours</span>
-                <span class="kpi-val" id="arbiter-free-hours">-- Hrs</span>
-                <span class="kpi-sub">Mechanical Chillers Powered OFF</span>
-              </div>
-            </div>
-
-            <div class="arbiter-controls-bar">
-              <div class="form-group inline-flex">
-                <label for="arbiter-flex-slider">CooL-LLM AI Batch Flexibility:</label>
-                <input type="range" id="arbiter-flex-slider" min="0" max="60" step="10" value="40">
-                <span id="arbiter-flex-val" class="slider-value">40%</span>
-              </div>
-              <button id="btn-run-arbiter" class="btn-primary">
-                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                Simulate 24h Hourly Dispatch
-              </button>
-            </div>
-          </div>
-
-          <!-- 24-Hour Visual Schedule Timeline -->
-          <div class="dispatch-timeline-container">
-            <h3>24-Hour Thermal &amp; Workload Dispatch Strategy</h3>
-            <div class="dispatch-phase-legend">
-              <span class="legend-item"><span class="legend-dot dot-free"></span> Night Economizer (Chillers OFF)</span>
-              <span class="legend-item"><span class="legend-dot dot-dry"></span> Morning Dry Chiller</span>
-              <span class="legend-item"><span class="legend-dot dot-shift"></span> CooL-LLM AI Shift + Mist</span>
-              <span class="legend-item"><span class="legend-dot dot-shave"></span> Evening Peak-Shave</span>
-            </div>
-            <div class="timeline-bar-strip" id="timeline-bar-strip">
-              <!-- Rendered dynamically -->
-            </div>
-          </div>
-
-          <!-- Hourly Dispatch Table -->
-          <div class="table-container mt-4">
-            <table class="data-table" id="arbiter-hourly-table">
-              <thead>
-                <tr>
-                  <th>Hour</th>
-                  <th>Ambient Temp</th>
-                  <th>Active Cooling Mode</th>
-                  <th>Chiller Status</th>
-                  <th>IT Load (MW)</th>
-                  <th>PUE</th>
-                  <th>Water Intake (m³/h)</th>
-                  <th>Grid Power (MW)</th>
-                </tr>
-              </thead>
-              <tbody id="arbiter-hourly-tbody">
-                <!-- Rendered dynamically -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-    </main>
-
-    <!-- Modal for Live Evaluation Suite -->
-    <div id="evals-modal" class="modal-overlay hidden">
-      <div class="modal-card">
-        <div class="modal-header">
-          <h3>Section 8 Evaluation Benchmark Suite</h3>
-          <button id="btn-close-modal" class="btn-close">&times;</button>
-        </div>
-        <div class="modal-body" id="modal-eval-body">
-          <div class="loading-spinner">Running automated evaluation checks...</div>
+        <div class="tiles rv">
+          <article class="tile">
+            <canvas data-viz="wave" aria-hidden="true"></canvas>
+            <span class="idx mono">01</span>
+            <h3>One engine writes every number</h3>
+            <p>Seasonal physics and stated coefficients give energy, water, carbon and cost. A language model never types a figure.</p>
+          </article>
+          <article class="tile">
+            <canvas data-viz="grid" aria-hidden="true"></canvas>
+            <span class="idx mono">02</span>
+            <h3>A second process checks the first</h3>
+            <p>A separate verifier traces each number in a brief back to the engine. A figure that matches nothing blocks the output.</p>
+          </article>
+          <article class="tile">
+            <canvas data-viz="stems" aria-hidden="true"></canvas>
+            <span class="idx mono">03</span>
+            <h3>Burdens stay apart</h3>
+            <p>Water, power, carbon and cost remain separate lines. There is no combined score to hide the trade-off.</p>
+          </article>
+          <article class="tile">
+            <canvas data-viz="ring" aria-hidden="true"></canvas>
+            <span class="idx mono">04</span>
+            <h3>Coverage flags who the data misses</h3>
+            <p>Satellite settlement footprints are compared with piped-water records to show where people may be uncounted.</p>
+          </article>
         </div>
       </div>
+    </section>
+
+    <!-- 02 -->
+    <section class="band" id="day">
+      <div class="wrap">
+        <div class="eyebrow rv">02 &middot; The day</div>
+        <div class="band-head rv">
+          <h2>One band of the day, moved.</h2>
+          <p class="lede">Flexible AI batch work can wait. The dispatch model defers it out of the afternoon heat, runs the chillers off at night when the air is cool enough, and trims cooling at the evening residential peak.</p>
+        </div>
+        <div class="field rv" id="field">
+          <canvas id="spectrum" role="img" aria-label="Ambient temperature across 24 hours in Bengaluru, with the 12:00 to 17:00 window where flexible load is deferred highlighted"></canvas>
+          <div class="field-caption mono">Ambient temperature over 24 hours &middot; Bengaluru<br>Highlighted: when flexible AI load is deferred</div>
+          <div class="field-readout mono" id="readout" aria-live="off">12:00 &ndash; 17:00 &middot; deferral window</div>
+        </div>
+        <p class="field-note rv">Flexible AI batch work moves out of the 12:00&ndash;17:00 window, so the plant runs lighter through the hottest hours. Open the 24-hour dispatch tab to see every hour for your own site.</p>
+      </div>
+    </section>
+
+    <!-- 03 -->
+    <section class="band" id="scope">
+      <div class="wrap">
+        <div class="eyebrow rv">03 &middot; Scope</div>
+        <div class="band-head rv">
+          <h2>Three cities. Three designs. Every hour.</h2>
+          <p class="lede">Compare Bengaluru, Chennai and Mumbai across dry summer and monsoon, and watch a full day play out hour by hour.</p>
+        </div>
+        <div class="stats rv">
+          <div class="stat"><span class="n" data-stat="ledgers"><i>2</i></span><p class="c">ledgers from every scenario: what the facility spends and what the community absorbs.</p></div>
+          <div class="stat"><span class="n" data-stat="profiles"><i>3</i></span><p class="c">cooling designs side by side: evaporative, air-cooled and hybrid adiabatic.</p></div>
+          <div class="stat"><span class="n" data-stat="cities"><i>3</i></span><p class="c">cities ready to compare: Bengaluru, Chennai and Mumbai.</p></div>
+          <div class="stat"><span class="n" data-stat="hours"><i>24</i></span><p class="c">hours modelled in the daily dispatch, from night free cooling to the evening peak.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 04 -->
+    <section class="band" id="faq">
+      <div class="wrap">
+        <div class="eyebrow rv">04 &middot; Questions</div>
+        <div class="band-head rv">
+          <h2>Questions, answered.</h2>
+          <p class="lede">Before you open the workbench.</p>
+        </div>
+        <div class="faq rv">
+          <details>
+            <summary>What does it compare?<span class="plus" aria-hidden="true"></span></summary>
+            <p class="a">Three cooling designs for the same site and workload: evaporative towers, air-cooled chillers and hybrid adiabatic coolers. For each one you get energy, PUE, water, carbon and operating cost, and what the design asks of the local water supply and power grid.</p>
+          </details>
+          <details>
+            <summary>Why two ledgers?<span class="plus" aria-hidden="true"></span></summary>
+            <p class="a">The facility ledger is what the operator spends. The community ledger is what the shared water and power systems absorb: water headroom, groundwater stress and substation peak. The same choice moves both, and seeing them together shows who carries what.</p>
+          </details>
+          <details>
+            <summary>Why is there no single score?<span class="plus" aria-hidden="true"></span></summary>
+            <p class="a">A combined score would hide the trade-off. Water, power and carbon stay side by side, and when no design meets every limit you set, the planner says so and names the limit that binds.</p>
+          </details>
+          <details>
+            <summary>Can I test a what-if?<span class="plus" aria-hidden="true"></span></summary>
+            <p class="a">Yes. Change the site, season, workload, IT load or grid carbon and every ledger recalculates. Set facility and community limits and the planner returns the designs that meet all of them.</p>
+          </details>
+          <details>
+            <summary>How are the figures checked?<span class="plus" aria-hidden="true"></span></summary>
+            <p class="a">Every number comes from one calculation engine. A separate verifier traces each figure in a brief back to that engine and withholds anything that does not match.</p>
+          </details>
+          <details>
+            <summary>Who is it for?<span class="plus" aria-hidden="true"></span></summary>
+            <p class="a">Operators and developers choosing a cooling design, and the municipalities, utilities and community groups who want a transparent read of the same assessment. Reviewers can also check an applicant's stated figures against the modelled range.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <section class="close">
+      <div class="wrap">
+        <h2 class="rv">Ask who pays.</h2>
+        <div class="hero-actions rv">
+          <a class="btn primary" href="/app">Open the workbench</a>
+          <a class="btn" href="/app#review">Review a permit claim</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <div class="wrap mono">
+      <span>AquaCarbon DC &middot; AI Builder Cup &middot; Sustainability &amp; Social Impact</span>
+      <span>Modelled estimates &middot; Not engineering advice</span>
     </div>
+  </footer>
 
-    <!-- Footer -->
-    <footer class="app-footer">
-      <div class="footer-content">
-        <p><strong>AquaCarbon DC — Commons Edition</strong> &bull; AI Builder Cup (Sustainability &amp; Social Impact) &bull; Built for Google Cloud (Cloud Run, Gemini API)</p>
-        <p class="footer-sub">Deterministic engine is the numerical source of truth. Missing data is shown as unavailable. Every unit-tagged number in a brief is checked against the engine by a separate verifier before it is shown.</p>
-      </div>
-    </footer>
-  </div>
-
-  <script src="/static/app.js"></script>
+  <script src="/static/landing.js" defer></script>
 </body>
 </html>

@@ -159,6 +159,21 @@ async def run_arbiter_simulation_endpoint(payload: ArbiterRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/api/review")
+async def review_endpoint(payload: dict):
+    """Permit-review use case: check an applicant's stated figures against the modelled range.
+    Uses ADK + MCP + A2A. Imported lazily so the main app stays light; needs requirements-agents.txt."""
+    try:
+        from review.models import ReviewRequest
+        from review.service import ReviewService, ReviewError
+    except ImportError as e:
+        raise HTTPException(status_code=503, detail=f"Review feature needs the agent extras (pip install -r requirements-agents.txt): {e}")
+    try:
+        return (await ReviewService().review(ReviewRequest.model_validate(payload))).model_dump(mode="json")
+    except ReviewError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+
 @app.get("/api/evals/run")
 async def run_evals_endpoint():
     try:
@@ -200,8 +215,16 @@ if os.path.exists(static_dir):
 
 
 @app.get("/")
-async def serve_index():
+async def serve_landing():
     index_file = os.path.join(static_dir, "index.html")
     if os.path.exists(index_file):
         return FileResponse(index_file)
     return {"message": "AquaCarbon DC API is active. Static frontend initializing."}
+
+
+@app.get("/app")
+async def serve_workbench():
+    app_file = os.path.join(static_dir, "app.html")
+    if os.path.exists(app_file):
+        return FileResponse(app_file)
+    raise HTTPException(status_code=404, detail="Workbench page not found")
