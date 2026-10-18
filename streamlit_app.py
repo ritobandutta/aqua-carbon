@@ -6,7 +6,7 @@ Grounded in Karimi et al. (2022) & WRI Aqueduct baselines.
 
 import streamlit as st
 import pandas as pd
-from engine_core import AquaCarbonEngine, ScenarioInput
+from engine.core import AquaCarbonEngine, CoreScenarioInput
 
 st.set_page_config(
     page_title="AquaCarbon DC — Commons Edition",
@@ -23,7 +23,7 @@ it_load = st.sidebar.slider("AI Cluster IT Workload (MW)", min_value=5.0, max_va
 ambient_temp = st.sidebar.slider("Summer Ambient Dry-Bulb (°C)", min_value=20.0, max_value=45.0, value=34.0, step=1.0)
 grid_carbon = st.sidebar.slider("Grid Carbon (kg CO2/kWh)", min_value=0.30, max_value=0.90, value=0.72, step=0.02)
 
-scenario = ScenarioInput(
+scenario = CoreScenarioInput(
     it_load_mw=it_load,
     ambient_temp_c=ambient_temp,
     grid_emission_factor=grid_carbon

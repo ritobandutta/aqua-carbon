@@ -1,5 +1,5 @@
 """
-AquaCarbon DC: Deterministic Calculation Engine Core
+AquaCarbonEngine: Standalone lightweight calculation engine.
 Grounded in Karimi et al. (2022) and WRI Aqueduct baselines.
 """
 
@@ -8,7 +8,7 @@ from typing import Dict, Any
 
 
 @dataclass
-class ScenarioInput:
+class CoreScenarioInput:
     location: str = "Bengaluru, India"
     it_load_mw: float = 10.0  # Standard AI Cluster IT Capacity
     ambient_temp_c: float = 34.0  # Summer peak ambient dry-bulb
@@ -18,8 +18,8 @@ class ScenarioInput:
 
 
 class AquaCarbonEngine:
-    def __init__(self, scenario: ScenarioInput):
-        self.s = scenario
+    def __init__(self, scenario: CoreScenarioInput = None):
+        self.s = scenario or CoreScenarioInput()
         self.daily_it_kwh = self.s.it_load_mw * 1000 * 24
 
     def calculate_profile(self, profile_type: str) -> Dict[str, Any]:
@@ -74,15 +74,3 @@ class AquaCarbonEngine:
                 "grid_strain_risk": "High (Summer Concurrency)" if peak_grid_strain_mw > 13.5 else "Moderate"
             }
         }
-
-
-if __name__ == "__main__":
-    scenario = ScenarioInput()
-    engine = AquaCarbonEngine(scenario)
-    
-    print("=== EVAPORATIVE (WET) COOLING ===")
-    print(engine.calculate_profile("evaporative"))
-    print("\n=== DRY (AIR-COOLED) COOLING ===")
-    print(engine.calculate_profile("dry"))
-    print("\n=== HYBRID ADIABATIC COOLING ===")
-    print(engine.calculate_profile("hybrid"))

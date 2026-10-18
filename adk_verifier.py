@@ -8,7 +8,7 @@ import os
 import json
 from typing import Dict, Any
 
-from engine_core import AquaCarbonEngine, ScenarioInput
+from engine.core import AquaCarbonEngine, CoreScenarioInput
 
 
 def advisor_agent(engine_results: dict) -> str:
@@ -115,7 +115,7 @@ Output format: STRICT JSON with keys:
 # Execution Flow Demo
 if __name__ == "__main__":
     # 1. Run deterministic calculations
-    eng = AquaCarbonEngine(ScenarioInput())
+    eng = AquaCarbonEngine(CoreScenarioInput())
     results = {
         "evaporative": eng.calculate_profile("evaporative"),
         "dry": eng.calculate_profile("dry")
