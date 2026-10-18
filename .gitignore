@@ -1,5 +1,6 @@
 # OS / editor
 .DS_Store
+Thumbs.db
 .idea/
 .vscode/
 *.swp
@@ -16,7 +17,13 @@ credentials*.json
 # Python
 __pycache__/
 *.py[cod]
-.venv/
+*$py.class
+*.so
+.Python
+.venv
+env/
+venv/
+ENV/
 .pytest_cache/
 .ruff_cache/
 .pyright/
@@ -24,8 +31,20 @@ __pycache__/
 .coverage
 htmlcov/
 *.egg-info/
-dist/
+.installed.cfg
+*.egg
 build/
+dist/
+develop-eggs/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
 
 # Node / web
 node_modules/
@@ -42,7 +61,7 @@ data/cache/
 data/raw/
 .cache/
 
-# Eval and run outputs (reports under docs/ are committed deliberately)
+# Eval and run outputs
 evals/runs/
 *.log
 
