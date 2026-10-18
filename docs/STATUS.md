@@ -45,6 +45,16 @@ Last updated 2026-10-18. Covers the implementation OnHighEngineer pushed (46 fil
 11. **Workload-shifting and arbiter results are modelled with fixed multipliers** (for example WUE x0.82), so they illustrate the idea but are not derived.
 12. **CORS is `*` and the API is unauthenticated.** Fine for a public judging demo, not for anything else.
 
+## Update 2026-10-18 (later): completed since the table above
+
+- One engine (`engine/calculator.py`). `engine/core.py`, `engine.py`, `adk_verifier.py` removed. Streamlit now uses the same engine.
+- Unknown regions return 404 instead of silently using Bengaluru.
+- Confidence is derived from provenance: untraced values are LOW and labelled illustrative. The coverage check lowers dependent indicators.
+- `run_id` and `engine_version` on results. Evals now 9 checks (repeat-run stability, seeded gap with control, season flip, latency). CI workflow, Makefile and `docs/DEMO.md` added.
+- Dataset audit run: see `docs/DATA_SOURCES.md`. Result: nothing verified against an official file. The 710 kg/MWh factor and the 2.10 L/kWh evaporative WUE are the two values most likely to be wrong.
+
+Limitations 3 and 4 above are resolved. Limitation 2 remains open and is now documented in detail.
+
 ## Plan status
 
 | Plan phase | State |

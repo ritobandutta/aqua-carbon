@@ -1,6 +1,6 @@
 # Data Sources: Audit Tracker
 
-Candidates only. **None are verified yet.** Phase 0 task: for each row confirm access, licence, resolution and a stable URL, then mirror the result into `data/sources.yaml` (id, URL, licence, resolution, accessed date). Do not pick community-ledger indicators until this is done.
+Audit run 2026-10-18 (details in `data/sources.yaml`). **No engine value is verified against an official source yet.** Official CEA, CPHEEO, KERC, BWSSB and CGWB pages would not open for the research agent; a person must open them. Phase 0 task: for each row confirm access, licence, resolution and a stable URL, then mirror the result into `data/sources.yaml` (id, URL, licence, resolution, accessed date). Do not pick community-ledger indicators until this is done.
 
 Status values: `candidate`, `verified`, `rejected`.
 
@@ -19,6 +19,23 @@ Status values: `candidate`, `verified`, `rejected`.
 | Official population | Census of India, ward-level where available | ward | coverage check (stretch) | candidate | census vintage is old, so say so |
 | Vulnerability context | public vulnerability indices | varies | community context | candidate | reuse existing layers, do not invent |
 | Cooling coefficients | Karimi et al. 2022, ASHRAE, vendor datasheets | n/a | engine coefficients as low, central and high | candidate | record the page or table for every number |
+
+## Audit result (2026-10-18)
+
+| Item | Result |
+|---|---|
+| WRI India data-centre report (278 facilities, 75% in five states) | Confirmed on the publisher page |
+| Open-Meteo, GHSL, LBNL 2024 | Terms read on opened pages. Usable |
+| Grid factor 0.710 kg/kWh (southern) | **Not supported.** Only an unverified national FY2024-25 figure. CEA V20.0 (FY2023-24) is 0.727 per a news article |
+| Bengaluru "Over-Exploited" | Supported by secondary reports, no CGWB table opened |
+| INR 8.50/kWh | Not verified. Base HT energy charge reported as 6.70 |
+| INR 95/kL | Not verified. Official BWSSB order not found |
+| 135 LPCD | Plausible via a third-party snippet. Manual page not found |
+| Evaporative WUE 2.10 L/kWh | **Looks high.** LBNL reports US averages of 0.36-0.48 L/kWh. Needs a cited source or a lower figure |
+| Karimi et al. 2022 | Confirms direction only (air-cooled PUE ~13% higher, WUE 66% lower). No absolute values, so engine base values are uncited |
+| Coverage-check areas (42.8 km2, 23.4 km2, densities) | Hard-coded, no source |
+
+Next step for a person: open the official CEA workbook, KERC tariff order, BWSSB tariff circular and CGWB Karnataka table, record page and cell, then flip that key in `VALUE_STATUS` to `published`.
 
 ## Rules for adding a source
 

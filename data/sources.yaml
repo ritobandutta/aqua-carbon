@@ -1,0 +1,87 @@
+# Provenance registry. Status values:
+#   confirmed_primary   - read on the publisher's own page (URL opened)
+#   secondary_only      - figure seen only on a news/aggregator/search page, not the official file
+#   not_found           - could not be located or opened
+# Audit run 2026-10-18 by a research subagent; official CEA, CPHEEO, KERC, BWSSB, CGWB pages
+# would not open (login wall, 403, certificate error, connection refused). A human should open them.
+# engine_value is what the code currently uses (see engine/data_sources.py, VALUE_STATUS).
+
+- id: wri_india_data_centres_2026
+  url: https://wri-india.org/data/more-half-indias-data-centres-are-water-stressed-regions
+  status: confirmed_primary
+  evidence: '"75% of all data centres located across just five states: Maharashtra, Tamil Nadu, Karnataka, Telangana and Uttar Pradesh"; "278 facilities nationally"; published May 18, 2026'
+  licence: "No licence statement; footer says (c) 2026 World Resources Institute. Terms of Use not read."
+  used_for: problem context only, not an engine input
+
+- id: cea_co2_baseline
+  url: https://cea.nic.in/cdm-co2-baseline-database/
+  status: secondary_only
+  evidence: 'Saur Energy article quotes V20.0 (Dec 2024, FY2023-24): "weighted average emission factor adjusted for renewable energy ... 0.727 tCO2/MWh". Search snippets give V21.0 (FY2024-25) about 0.710; unverified.'
+  engine_value: "710 kg/MWh for Bengaluru/southern grid (718 Chennai, 705 Mumbai)"
+  verdict: "NOT supported. 0.710 appears only as an unverified national FY2024-25 figure; no southern-region figure found. Per-city values in the engine are unsourced."
+  licence: not_found
+
+- id: wri_aqueduct_4
+  url: https://www.wri.org/data/aqueduct-global-maps-40-data
+  status: confirmed_primary
+  evidence: 'Page says "Creative Commons". Download via sign-up form; also on Google Earth Engine as WRI/Aqueduct_Water_Risk/V4/baseline_annual.'
+  engine_value: "Bengaluru and Chennai = Extremely High, Mumbai = High"
+  verdict: "Bengaluru Urban baseline category NOT FOUND. Engine categories unverified."
+  licence: "Creative Commons (variant not confirmed on an opened page; CC BY 4.0 seen in search only)"
+
+- id: cgwb_groundwater_karnataka
+  url: https://cgwb.gov.in
+  status: secondary_only
+  evidence: 'Search snippet: Karnataka 2024 "Of 237 taluks, 45 are Over-exploited, 15 Critical, 33 Semi-critical and 144 Safe". News reports (Karnataka 2025): all Bengaluru Urban taluks over-exploited, extraction up to 378.85% in Bengaluru East.'
+  engine_value: "Bengaluru = Over-Exploited; Chennai = Critical; Mumbai = Semi-Critical"
+  verdict: "Bengaluru 'Over-Exploited' supported by secondary reports only. Chennai and Mumbai not checked."
+  licence: not_found
+
+- id: cpheeo_135_lpcd
+  url: https://cpheeo.gov.in
+  status: secondary_only
+  evidence: "Third-party snippet: 135 lpcd for urban areas with underground sewerage, 70 without, citing the 1999 manual. No page or table number found."
+  engine_value: "135 LPCD (Chennai 120)"
+  verdict: "Plausible, not verified. The 120 for Chennai has no support."
+
+- id: kerc_ht_tariff
+  url: https://www.theprint.in/india/kerc-increases-electricity-tariffs-for-commercial-industrial-consumers/2869823/
+  status: secondary_only
+  evidence: 'PTI: "HT-2a (industrial) consumers will pay a demand charge of Rs 365 per kVA and an energy charge of Rs 6.70 per unit". Energy charge only, all Karnataka supply companies.'
+  engine_value: "INR 8.50/kWh all-in"
+  verdict: "Not verified. Base energy charge is 6.70; 8.50 all-in would need demand charge, duty and surcharges. KERC order not opened."
+
+- id: bwssb_water_tariff
+  url: https://bwssb.karnataka.gov.in
+  status: not_found
+  evidence: 'Unofficial calculator site lists 2026-27 non-domestic INR 61.80/kL (0-10 kL) to 101.97/kL (above 100 kL). One aggregator page has a unit error. Official tariff order not found.'
+  engine_value: "INR 95/kL"
+  verdict: "Within an unofficial range, not verified."
+
+- id: ghsl_built_up
+  url: https://human-settlement.emergency.copernicus.eu/
+  status: confirmed_primary
+  evidence: '"Reuse of this data is authorised with proper acknowledgment of the source." Release R2023A.'
+  licence: "Reuse authorised with acknowledgment (CC BY 4.0 per search result only)"
+  verdict: "Resolutions not stated on opened pages (search: 10 m, 100 m, 1 km). The engine does not read GHSL; the coverage-check km2 values are hard-coded and unsourced."
+
+- id: open_meteo_historical
+  url: https://open-meteo.com/en/terms
+  status: confirmed_primary
+  evidence: '"You may only use the free API services for non-commercial purposes."; "CC BY 4.0"; credit "Weather data by Open-Meteo.com"; ERA5 0.25 deg (~25 km), hourly, 1940 to present.'
+  licence: "CC BY 4.0 for data; free tier non-commercial only (no ads, no subscriptions)"
+  verdict: "Usable for a hackathon. Not yet used by the engine."
+
+- id: karimi_2022
+  url: https://doi.org/10.1016/j.resconrec.2022.106194
+  status: secondary_only
+  evidence: 'Record opened via experts.arizona.edu. Two Phoenix colocation data centres: DC1 air-cooled chillers, DC2 water-cooled chillers plus evaporative. "DC1 average PUE is nearly 13% higher compared to DC2"; "its source WUE is 66% lower than DC2". No absolute PUE/WUE found.'
+  licence: "(c) 2022 Elsevier B.V.; not labelled open access"
+  verdict: "Supports the direction of the trade-off only. Engine PUE/WUE base values (1.20/2.10, 1.45/0.02, 1.27/0.65) are NOT taken from this paper and carry no citation."
+
+- id: lbnl_2024_us_dc_energy
+  url: https://eta-publications.lbl.gov/sites/default/files/2024-12/lbnl-2024-united-states-data-center-energy-usage-report_1.pdf
+  status: confirmed_primary
+  evidence: 'p.48: "average WUE ... just over 0.36 L/kWh through 2023", "between 0.45 and 0.48 L/kWh" after; p.46-47: hyperscale "0.1-0.3 L/kWh"; Section 5: "4.52 L/kWh" indirect water.'
+  licence: "US Government non-exclusive licence only; no open licence"
+  verdict: "US fleet averages are far below the engine's evaporative WUE of 2.10 L/kWh (annual). That base value looks high and needs a source or a lower, cited figure."

@@ -13,7 +13,7 @@ From v2 section 13 plus items raised during planning. Do these in Phase 0, befor
 
 - [ ] **Model IDs and quotas.** Current Gemini Flash and Pro IDs, Gemma availability, fine-tuning options on Vertex AI, free-tier rate limits on AI Studio. Fill `MODEL_FLASH` and `MODEL_PRO` in `.env.example` afterwards.
 - [ ] **SDK versions.** ADK, A2A and MCP Python SDKs: current versions, compatibility, and whether ADK supports A2A as a client and server the way the plan assumes.
-- [ ] **Datasets, access and licence.** See `DATA_SOURCES.md`. Choose community-ledger indicators only after this check.
+- [ ] **Datasets, access and licence.** First pass done 2026-10-18 (`DATA_SOURCES.md`, `data/sources.yaml`): licences read for Open-Meteo, GHSL, LBNL. Still open: open the official CEA, KERC, BWSSB, CGWB and CPHEEO files and record page and cell.
 - [ ] **Cooling profiles.** Locate published relationships (for example Karimi et al. 2022, ASHRAE) and decide which two profiles the engine can support credibly. Likely an evaporative tower with a water-cooled chiller, against an air-cooled chiller or dry cooler.
 - [ ] **Prior-art pass.** Re-check integrated cooling-plus-community tools, including recent launches. The pitch claim is "integrated, agentic and confidence-aware", not "first ever".
 
