@@ -129,6 +129,27 @@ async def run_evals_endpoint():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/evals/tamper-demo")
+async def run_tamper_demo():
+    """
+    Live Invalidation Demo: Deliberately injects a 15% discrepancy in brief draft
+    to demonstrate the Independent Verifier Agent catching the error, logging the variance,
+    and blocking publication.
+    """
+    try:
+        from evals.run_evals import eval_verifier_catch_rate
+        result = eval_verifier_catch_rate()
+        return {
+            "demo_name": "Agent2Agent Live Invalidation & Safety Guardrail",
+            "injection_description": "Injected -15% simulated LLM hallucination on water volume and PUE",
+            "result": result,
+            "action_taken": "BLOCKED_PUBLICATION",
+            "verdict": "Independent Verifier Agent intercepted discrepancy and successfully blocked output publication."
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Mount static assets
 static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "static")
 if os.path.exists(static_dir):

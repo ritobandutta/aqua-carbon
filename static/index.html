@@ -84,6 +84,14 @@
         </select>
       </div>
 
+      <div class="control-group">
+        <label for="workload-selector">AI Workload Flexibility (Cooling Lever)</label>
+        <select id="workload-selector" class="custom-select">
+          <option value="static_inference">24/7 AI Inference (Flat Unyielding Load)</option>
+          <option value="ai_training_flexible">Flexible AI Training (Shift -40% from 12PM-4PM Peak Heat)</option>
+        </select>
+      </div>
+
       <div class="control-group slider-group">
         <div class="slider-header">
           <label for="capacity-slider">Design IT Workload</label>
@@ -307,6 +315,10 @@
 
           <div class="brief-display-container">
             <div class="brief-actions">
+              <button id="btn-tamper-demo" class="btn-tamper" title="Inject 15% Hallucination to demonstrate Verifier catching error">
+                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                Inject 15% Hallucination (Live Verifier Block Demo)
+              </button>
               <button id="btn-copy-brief" class="btn-secondary">
                 <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                 Copy Markdown

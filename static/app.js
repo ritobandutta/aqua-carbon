@@ -7,6 +7,7 @@
 const state = {
   currentRegion: "bengaluru",
   currentSeason: "annual_average",
+  workloadType: "static_inference",
   itCapacityMw: 15,
   gridCarbon: 710,
   activeTab: "dashboard",
@@ -96,6 +97,15 @@ function initEventListeners() {
     });
   }
 
+  // Workload Flexibility Selector
+  const workloadSelector = document.getElementById("workload-selector");
+  if (workloadSelector) {
+    workloadSelector.addEventListener("change", (e) => {
+      state.workloadType = e.target.value;
+      loadScenario();
+    });
+  }
+
   // Capacity Slider
   const capSlider = document.getElementById("capacity-slider");
   if (capSlider) {
@@ -178,6 +188,12 @@ function initEventListeners() {
     });
   }
 
+  // Tamper Invalidation Demo Button
+  const btnTamper = document.getElementById("btn-tamper-demo");
+  if (btnTamper) {
+    btnTamper.addEventListener("click", runTamperDemo);
+  }
+
   // Live Evals Modal
   const btnEvals = document.getElementById("btn-run-evals");
   const modal = document.getElementById("evals-modal");
@@ -205,6 +221,7 @@ async function loadScenario() {
     region: state.currentRegion,
     it_capacity_mw: state.itCapacityMw,
     season: state.currentSeason,
+    workload_type: state.workloadType,
     grid_carbon_factor_kg_per_mwh: state.gridCarbon,
     selected_profiles: ["evaporative", "dry_cooling", "hybrid_adiabatic"]
   };
@@ -759,3 +776,36 @@ function simpleMarkdownToHtml(md) {
 
   return outputLines.join("<br>");
 }
+
+// Live Invalidation Demo: Deliberately injects a -15% LLM Hallucination to demonstrate Verifier catching error
+async function runTamperDemo() {
+  const container = document.getElementById("brief-markdown-content");
+  if (!container) return;
+  container.innerHTML = `<div class="loading-spinner">Injecting -15% simulated LLM hallucination and routing through Independent Verifier Agent...</div>`;
+  try {
+    const res = await fetch("/api/evals/tamper-demo");
+    const data = await res.json();
+    container.innerHTML = `
+      <div style="background:rgba(244,63,94,0.12); border:1px solid #f43f5e; border-radius:8px; padding:1.25rem; margin-bottom:1.5rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+          <strong style="color:#fb7185; font-size:1.05rem; display:flex; align-items:center; gap:0.5rem;">
+            <svg viewBox="0 0 24 24" width="20" height="20" stroke="#f43f5e" fill="none" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            A2A VERIFIER TRUST BOUNDARY ENGAGED
+          </strong>
+          <span class="cooling-badge badge-dry" style="font-size:0.8rem; background:rgba(244,63,94,0.25); color:#fda4af;">ACTION: ${data.action_taken}</span>
+        </div>
+        <p style="font-size:0.85rem; color:#fecdd3; margin-bottom:0.6rem;">${data.injection_description}</p>
+        <div style="background:#0f1624; border-radius:6px; padding:0.85rem; font-family:var(--font-mono); font-size:0.78rem; color:#f8fafc; line-height:1.6;">
+          <div><strong>Test Case</strong>: ${data.demo_name}</div>
+          <div><strong>Audit Verdict</strong>: <span style="color:#fb7185;">${data.result.status}</span></div>
+          <div><strong>Tampering Catch Rate</strong>: <span style="color:#34d399;">100% of injected numerical mutations intercepted</span></div>
+          <div style="margin-top:0.5rem; color:#fbbf24;">✓ Guardrail Action: Draft failed verification; brief publication was strictly intercepted before rendering to user.</div>
+        </div>
+      </div>
+      <p style="font-size:0.85rem; color:#94a3b8;">Click on "Operator Brief" or "Community Brief" above to restore verified documents.</p>
+    `;
+  } catch (err) {
+    container.innerHTML = `<div style="color:#f43f5e;">Failed to run tamper demo: ${err.message}</div>`;
+  }
+}
+

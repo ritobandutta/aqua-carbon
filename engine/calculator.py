@@ -6,7 +6,7 @@ Scope 2 carbon, economic costs, and community impact indicators.
 
 from typing import Dict, List, Tuple, Any
 from .models import (
-    CoolingType, Season, FacilityLedger, CommunityLedger,
+    CoolingType, Season, WorkloadType, FacilityLedger, CommunityLedger,
     CommunityIndicator, BurdenShiftScores, ProfileAssessment,
     DataConfidence, PlannerConstraints, ConstraintCheckResult,
     PlannerOutput, ScenarioInput
@@ -65,7 +65,8 @@ def compute_facility_ledger(
     region_key: str,
     grid_carbon_factor: float = 710.0,
     electricity_tariff_inr_kwh: float = 8.50,
-    water_tariff_inr_kl: float = 95.0
+    water_tariff_inr_kl: float = 95.0,
+    workload_type: WorkloadType = WorkloadType.STATIC_INFERENCE
 ) -> FacilityLedger:
     profile_meta = COOLING_SPEC_BASELINES[cooling_type]
     regional_data = get_regional_profile(region_key)
@@ -99,6 +100,15 @@ def compute_facility_ledger(
             adjusted_wue = base_wue
     else:
         adjusted_wue = base_wue  # Dry stays near zero
+
+    # AI Workload Shifting Lever (Shifting flexible batch training away from 12 PM - 4 PM heat window)
+    if workload_type == WorkloadType.AI_TRAINING_FLEXIBLE:
+        if cooling_type == CoolingType.EVAPORATIVE:
+            adjusted_wue = round(adjusted_wue * 0.82, 3)  # 18% water savings avoiding peak evaporation
+        elif cooling_type == CoolingType.HYBRID_ADIABATIC:
+            adjusted_wue = round(adjusted_wue * 0.70, 3)  # 30% water savings running fully dry at night
+        # Night economizer hours improve effective PUE
+        adjusted_pue = round(max(adjusted_pue - 0.03, 1.10), 3)
 
     # Annual operational hours
     hours_per_year = 8760.0
@@ -329,7 +339,8 @@ def evaluate_scenario(scenario: ScenarioInput) -> Dict[str, ProfileAssessment]:
             it_capacity_mw=scenario.it_capacity_mw,
             season=scenario.season,
             region_key=scenario.region,
-            grid_carbon_factor=scenario.grid_carbon_factor_kg_per_mwh
+            grid_carbon_factor=scenario.grid_carbon_factor_kg_per_mwh,
+            workload_type=scenario.workload_type
         )
 
         c_ledger = compute_community_ledger(

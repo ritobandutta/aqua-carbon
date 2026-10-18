@@ -22,6 +22,11 @@ class Season(str, Enum):
     WINTER = "winter"
 
 
+class WorkloadType(str, Enum):
+    STATIC_INFERENCE = "static_inference"  # 24/7 flat critical inference
+    AI_TRAINING_FLEXIBLE = "ai_training_flexible"  # AI batch training/fine-tuning shifted off afternoon heat peak
+
+
 class WaterStressLevel(str, Enum):
     LOW = "Low (<10%)"
     MEDIUM_HIGH = "Medium-High (20-40%)"
@@ -170,6 +175,7 @@ class ScenarioInput(BaseModel):
     region: str = "Bengaluru, Karnataka, India"
     it_capacity_mw: float = 15.0
     season: Season = Season.ANNUAL_AVERAGE
+    workload_type: WorkloadType = WorkloadType.STATIC_INFERENCE
     grid_carbon_factor_kg_per_mwh: float = 710.0  # National Southern Regional Grid average gCO2/kWh
     local_substation_capacity_mw: float = 60.0
     utility_water_headroom_ml_per_year: float = 250.0  # BWSSB industrial allocation buffer
